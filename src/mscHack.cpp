@@ -2,7 +2,7 @@
 
 Plugin *thePlugin;
 
-void init(rack::Plugin *p) 
+__attribute__((__visibility__("default"))) void init(rack::Plugin *p)
 {
     thePlugin = p;
 
