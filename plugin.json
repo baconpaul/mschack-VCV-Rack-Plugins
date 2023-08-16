@@ -70,7 +70,7 @@
 
     {
       "slug": "Osc_3Ch_Widget",
-      "name": "(Untested) OSC 3 Channel",
+      "name": "OSC 3 Channel",
       "description": "3 Channel Synth",
       "tags": [
         "Synth voice"
@@ -176,7 +176,7 @@
     },
     {
       "slug": "Morze",
-      "name": "(Untested) Morze",
+      "name": "Morze",
       "description": "Morse Code Generator",
       "tags": [
         "Sequencer"
@@ -203,7 +203,7 @@
 
     {
       "slug": "Maude221",
-      "name": "(Untested) Maude Two to One",
+      "name": "(Crashes) Maude Two to One",
       "description": "Rectify/Combine 2 mono signals",
       "tags": [
         "Waveshaper"
