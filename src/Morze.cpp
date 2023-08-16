@@ -208,6 +208,7 @@ struct Morze_Widget : ModuleWidget {
              m_TextField->setText(asMorze()->m_TextFieldText);
           }
        }
+       Widget::step();
     }
 };
 
