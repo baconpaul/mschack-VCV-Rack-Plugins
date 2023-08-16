@@ -2,12 +2,17 @@
 
 #define QITEMS 256
 
-typedef struct
+struct LINE_Q
 {
-    Vec item[ QITEMS ];
+    LINE_Q()
+    {
+       for (auto i=0U; i<QITEMS; ++i)
+          item[i] = rack::Vec();
+    }
 
-    unsigned char index;
-}LINE_Q;
+    Vec item[ QITEMS ];
+    unsigned char index{0};
+};
 
 //-----------------------------------------------------
 // Widget_Image
@@ -23,12 +28,10 @@ struct Widget_LineImage : TransparentWidget
     //-----------------------------------------------------
     // Procedure:   constructor
     //-----------------------------------------------------
-    Widget_LineImage( float x, float y, float w, float h )
+    Widget_LineImage( float x, float y, float w, float h ) : m_Q{}
     {
         box.pos = Vec( x, y );
         box.size = Vec( w, h );
-
-        memset( &m_Q, 0, sizeof( m_Q ) );
 
         m_bInitialized = true;
     }

@@ -1,4 +1,5 @@
 #include "mscHack.hpp"
+#include <array>
 
 //-----------------------------------------------------
 // Module Definition
@@ -55,7 +56,7 @@ struct SEQ_Envelope_8 : Module
     dsp::SchmittTrigger      m_SchTrigGlobalTrig;
 
     // channel triggers
-    dsp::SchmittTrigger      m_SchTrigChTrig[ nCHANNELS ] ={};
+    std::array<dsp::SchmittTrigger,nCHANNELS>      m_SchTrigChTrig{};
 
     int                 m_CurrentChannel = 0;
     int                 m_GraphData[ nCHANNELS ][ ENVELOPE_HANDLES ] = {};
