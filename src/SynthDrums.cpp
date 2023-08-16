@@ -165,8 +165,6 @@ struct SynthDrums : Module
     float GetAudio(int ch);
 };
 
-SynthDrums SynthDrumsBrowser;
-
 //-----------------------------------------------------
 // SynthDrums_WaveSelect
 //-----------------------------------------------------

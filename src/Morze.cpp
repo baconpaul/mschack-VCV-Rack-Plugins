@@ -132,8 +132,6 @@ struct Morze : Module
     void dataFromJson(json_t *rootJ) override;
 };
 
-Morze MorzeBrowser;
-
 //-----------------------------------------------------
 // Procedure:   Widget
 //
