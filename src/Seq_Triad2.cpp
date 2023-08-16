@@ -1,5 +1,4 @@
 ﻿#include "mscHack.hpp"
-#include "window.hpp"
 
 #define nKEYBOARDS  3
 #define nKEYS       37

@@ -1,4 +1,5 @@
 #include "mscHack.hpp"
+#include <iostream>
 
 #define MAX_ARP_PATTERNS    16
 #define MAX_ARP_NOTES       7
@@ -168,7 +169,7 @@ struct ARP700 : Module
 
     // pause
     bool                m_bPauseState = false;
-    MyLEDButton         *m_pButtonPause;
+    MyLEDButton         *m_pButtonPause = 0;
 
     // mode
     MyLEDButtonStrip    *m_pButtonMode = 0;
@@ -496,13 +497,18 @@ json_t *ARP700::dataToJson()
 //-----------------------------------------------------
 void ARP700::dataFromJson( json_t *root ) 
 {
+    std::cout << "A" << std::endl;
     JsonParams( FROMJSON, root );
 
-    m_pButtonPause->Set( m_bPauseState );
-    pKeyboardWidget->setkey( m_PatternSave[ m_PatCtrl.pat ].notes );
+    std::cout << "B " << m_pButtonPause << std::endl;
+    //m_pButtonPause->Set( m_bPauseState );
+    std::cout << "C" << std::endl;
+    //pKeyboardWidget->setkey( m_PatternSave[ m_PatCtrl.pat ].notes );
 
+    std::cout << "D" << std::endl;
     ChangePattern( m_PatCtrl.pat, true );
 
+    std::cout << "E" << std::endl;
     ArpStep( true );
 }
 

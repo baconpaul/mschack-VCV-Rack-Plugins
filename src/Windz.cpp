@@ -122,7 +122,7 @@ struct Windz : Module
             char strVal[ 10 ] = {};
 
             MSCH_Widget_Knob1::onChange( e );
-
+			ParamQuantity* paramQuantity = getParamQuantity();
             mymodule = (Windz*)paramQuantity->module;
 
             if( !mymodule )

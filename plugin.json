@@ -1,6 +1,6 @@
 {
   "slug": "mscHack",
-  "version": "1.0.2",
+  "version": "2.0.0",
   "license": "BSD-3-Clause",
   "name": "mscHack",
   "brand": "mscHack",
@@ -15,7 +15,7 @@
   "modules": [
     {
       "slug": "Compressor1",
-      "name": "Compressor",
+      "name": "(Untested) Compressor",
       "description": "Compressor",
       "tags": [
         "Compressor"
@@ -24,7 +24,7 @@
 
     {
       "slug": "MasterClockx4",
-      "name": "Master Clock x4",
+      "name": "(Untested) Master Clock x4",
       "description": "4 Channel Clock",
       "tags": [
         "Clock"
@@ -33,7 +33,7 @@
 
     {
       "slug": "SEQ_Envelope_8",
-      "name": "ENVY - 9",
+      "name": "(Untested) ENVY - 9",
       "description": "9 Channel Editable Envelope Generator",
       "tags": [
         "Sequencer"
@@ -42,7 +42,7 @@
 
     {
       "slug": "TriadSeq2",
-      "name": "Triad 2 Sequencer",
+      "name": "(Untested) Triad 2 Sequencer",
       "description": "3 Channel Keyboard Sequencer",
       "tags": [
         "Sequencer"
@@ -52,7 +52,7 @@
     {
 
       "slug": "ARP700",
-      "name": "ARP 700",
+      "name": "(Untested) ARP 700",
       "description": "7 Note programmable Arpeggiator",
       "tags": [
         "Arpeggiator"
@@ -61,7 +61,7 @@
 
     {
       "slug": "Seq_6ch_32step",
-      "name": "SEQ 6 x 32",
+      "name": "(Untested) SEQ 6 x 32",
       "description": "6 Channel 32 step voltage/trigger sequencer",
       "tags": [
         "Sequencer"
@@ -70,7 +70,7 @@
 
     {
       "slug": "Osc_3Ch_Widget",
-      "name": "OSC 3 Channel",
+      "name": "(Untested) OSC 3 Channel",
       "description": "3 Channel Synth",
       "tags": [
         "Synth voice"
@@ -79,7 +79,7 @@
 
     {
       "slug": "PingPong_Widget",
-      "name": "Ping Pong",
+      "name": "(Untested) Ping Pong",
       "description": "Ping Pong Delay",
       "tags": [
         "Delay"
@@ -88,7 +88,7 @@
 
     {
       "slug": "StepDelay",
-      "name": "Step Delay",
+      "name": "(Untested) Step Delay",
       "description": "Step Delay",
       "tags": [
         "Delay"
@@ -97,7 +97,7 @@
 
     {
       "slug": "Mix_4_0_4",
-      "name": "MIX 4 Channel",
+      "name": "(Untested) MIX 4 Channel",
       "description": "4 Channel Mixer",
       "tags": [
         "Mixer"
@@ -106,7 +106,7 @@
 
     {
       "slug": "Mix_9_3_4",
-      "name": "MIX 9 Channel, 3 Groups",
+      "name": "(Untested) MIX 9 Channel, 3 Groups",
       "description": "9 Channel Mixer",
       "tags": [
         "Mixer"
@@ -115,7 +115,7 @@
 
     {
       "slug": "Mix_16_4_4",
-      "name": "MIX 16 Channel, 4 groups",
+      "name": "(Untested) MIX 16 Channel, 4 groups",
       "description": "16 Channel Mixer",
       "tags": [
         "Mixer"
@@ -124,7 +124,7 @@
 
     {
       "slug": "Mix_24_4_4",
-      "name": "MIX 24 Channel, 4 groups",
+      "name": "(Untested) MIX 24 Channel, 4 groups",
       "description": "24 Channel Mixer",
       "tags": [
         "Mixer"
@@ -133,7 +133,7 @@
 
     {
       "slug": "ASAF8",
-      "name": "ASAF8",
+      "name": "(Untested) ASAF8",
       "description": "8 Channel Auto Stereo Audio Fader",
       "tags": [
         "Mixer"
@@ -142,7 +142,7 @@
 
     {
       "slug": "Dronez",
-      "name": "Dronez",
+      "name": "(Untested) Dronez",
       "description": "Random Drone",
       "tags": [
         "Oscillator"
@@ -150,7 +150,7 @@
     },
     {
       "slug": "Alienz",
-      "name": "Alienz",
+      "name": "(Untested) Alienz",
       "description": "Alien transmissions",
       "tags": [
         "Oscillator"
@@ -158,7 +158,7 @@
     },
     {
       "slug": "Windz",
-      "name": "Windz",
+      "name": "(Untested) Windz",
       "description": "Random Noise",
       "tags": [
         "Random",
@@ -167,7 +167,7 @@
     },
     {
       "slug": "Lorenz",
-      "name": "Lorenz",
+      "name": "(Untested) Lorenz",
       "description": "Lorenz Attractor",
       "tags": [
         "Random",
@@ -176,7 +176,7 @@
     },
     {
       "slug": "Morze",
-      "name": "Morze",
+      "name": "(Untested) Morze",
       "description": "Morse Code Generator",
       "tags": [
         "Sequencer"
@@ -185,7 +185,7 @@
 
     {
       "slug": "OSC_WaveMorph_3",
-      "name": "Wave morph Oscillator",
+      "name": "(Untested) Wave morph Oscillator",
       "description": "CV Morph 3 Drawable Waveforms",
       "tags": [
         "Oscillator"
@@ -194,7 +194,7 @@
 
     {
       "slug": "SynthDrums",
-      "name": "Synth Drums",
+      "name": "(Untested) Synth Drums",
       "description": "3 Channel Synth Drums",
       "tags": [
         "Drum"
@@ -203,7 +203,7 @@
 
     {
       "slug": "Maude221",
-      "name": "Maude Two to One",
+      "name": "(Untested) Maude Two to One",
       "description": "Rectify/Combine 2 mono signals",
       "tags": [
         "Waveshaper"

@@ -86,7 +86,8 @@ struct ASAF8 : Module
 
         void onChange( const event::Change &e ) override
         {
-            mymodule = (ASAF8*)paramQuantity->module;
+            ParamQuantity* paramQuantity = getParamQuantity();
+			mymodule = (ASAF8*)paramQuantity->module;
 
             sprintf( strVal, "[%.2fs]", paramQuantity->getValue() );
 

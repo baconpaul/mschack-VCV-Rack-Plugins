@@ -114,11 +114,11 @@ struct SEQ_6x32x16 : Module
     // Overrides 
     void    process(const ProcessArgs &args) override;
     json_t* dataToJson() override;
-    void    dataFromJson(json_t *rootJ) override;
+    void    dataFromJson(json_t* rootJ) override;
     void    onRandomize() override;
     void    onReset() override;
 
-    void    JsonParams( bool bTo, json_t *root);
+    void    JsonParams( bool bTo, json_t* root);
     void    CpyNext( int ch );
     void    Rand( int ch );
     void    ChangeProg( int ch, int prog, bool force );
@@ -420,7 +420,7 @@ void appendContextMenu(Menu *menu) override
 // Procedure: JsonParams  
 //
 //-----------------------------------------------------
-void SEQ_6x32x16::JsonParams( bool bTo, json_t *root) 
+void SEQ_6x32x16::JsonParams( bool bTo, json_t* root) 
 {
     JsonDataBool    ( bTo, "m_bPauseState",     root, &m_bPauseState[ 0 ], nCHANNELS );
     JsonDataBool    ( bTo, "m_bBiLevelState",   root, &m_bBiLevelState[ 0 ], nCHANNELS );
@@ -454,7 +454,7 @@ json_t *SEQ_6x32x16::dataToJson()
 // Procedure:   fromJson
 //
 //-----------------------------------------------------
-void SEQ_6x32x16::dataFromJson( json_t *root ) 
+void SEQ_6x32x16::dataFromJson( json_t* root ) 
 {
     JsonParams( FROMJSON, root );
 

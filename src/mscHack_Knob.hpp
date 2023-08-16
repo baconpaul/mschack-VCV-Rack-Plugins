@@ -70,7 +70,7 @@ struct MSCH_Widget_Knob1 : Knob
 
         // Re-transform the widget::TransformWidget
         float val;
-
+        ParamQuantity* paramQuantity = getParamQuantity();
         if (paramQuantity) 
         {
             val = paramQuantity->getValue();

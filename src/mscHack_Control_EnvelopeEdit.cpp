@@ -1,5 +1,4 @@
 #include "mscHack.hpp"
-#include "window.hpp"
 
 //-----------------------------------------------------
 // Procedure:   constructor
