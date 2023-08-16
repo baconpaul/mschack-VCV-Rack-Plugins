@@ -3,99 +3,99 @@
 //-----------------------------------------------------
 // Procedure:   constructor
 //-----------------------------------------------------
-void EnvelopeData::Init( int mode, int range, bool bGate, float fsegsize )
+void EnvelopeData::Init(int mode, int range, bool bGate, float fsegsize)
 {
-	m_bInitialized  = false;
+    m_bInitialized = false;
 
     m_Mode = mode;
     m_Range = range;
     m_bGateMode = bGate;
     m_fsegsize = fsegsize;
 
-	for( int hd = 0; hd < ENVELOPE_HANDLES; hd++ )
-		m_HandleVal[ hd ] = 0.5f;
+    for (int hd = 0; hd < ENVELOPE_HANDLES; hd++)
+        m_HandleVal[hd] = 0.5f;
 
-    recalcLine( -1 );
+    recalcLine(-1);
 
-    setMode( m_Mode );
+    setMode(m_Mode);
 
-    m_bInitialized  = true;
+    m_bInitialized = true;
 }
 
 //-----------------------------------------------------
 // Procedure:   Preset
 //-----------------------------------------------------
-void EnvelopeData::Preset( int preset )
+void EnvelopeData::Preset(int preset)
 {
     int i;
     float a, div;
 
-    if( preset < 0 || preset >= EnvelopeData::nPRESETS )
-    	return;
+    if (preset < 0 || preset >= EnvelopeData::nPRESETS)
+        return;
 
-    switch( preset )
+    switch (preset)
     {
     case EnvelopeData::PRESET_CLEAR:
-        resetValAll( 0.0f );
+        resetValAll(0.0f);
         break;
     case EnvelopeData::PRESET_SET:
-        resetValAll( 1.0f );
+        resetValAll(1.0f);
         break;
     case EnvelopeData::PRESET_HALF:
-        resetValAll( 0.5f );
+        resetValAll(0.5f);
         break;
     case EnvelopeData::PRESET_SIN:
         div = (float)(ENVELOPE_HANDLES - 1) / (PI * 2.0f);
-        for( i = 0; i < ENVELOPE_HANDLES; i++ )
+        for (i = 0; i < ENVELOPE_HANDLES; i++)
         {
-            a = ( 1.0f + sinf( (float)i / div ) ) / 2.0f;
-            setVal( i, a );
+            a = (1.0f + sinf((float)i / div)) / 2.0f;
+            setVal(i, a);
         }
         break;
     case EnvelopeData::PRESET_COS:
         div = (float)(ENVELOPE_HANDLES - 1) / (PI * 2.0f);
-        for( i = 0; i < ENVELOPE_HANDLES; i++ )
+        for (i = 0; i < ENVELOPE_HANDLES; i++)
         {
-            a = ( 1.0f + cosf( (float)i / div ) ) / 2.0f;
-            setVal( i, a );
+            a = (1.0f + cosf((float)i / div)) / 2.0f;
+            setVal(i, a);
         }
         break;
     case EnvelopeData::PRESET_COS_HALF:
         div = (float)(ENVELOPE_HANDLES - 1) / (PI * 1.0f);
-        for( i = 0; i < ENVELOPE_HANDLES; i++ )
+        for (i = 0; i < ENVELOPE_HANDLES; i++)
         {
-            a = ( 1.0f + cosf( (float)i / div ) ) / 2.0f;
-            setVal( i, a );
+            a = (1.0f + cosf((float)i / div)) / 2.0f;
+            setVal(i, a);
         }
         break;
     case EnvelopeData::PRESET_TRI_FULL:
         div = 1.0f / 16.0f;
         a = 0;
-        for( i = 0; i < ENVELOPE_HANDLES; i++ )
+        for (i = 0; i < ENVELOPE_HANDLES; i++)
         {
-        	setVal( i, a );
+            setVal(i, a);
             a += div;
         }
         break;
     case EnvelopeData::PRESET_TRI_HALF:
         div = 1.0f / 8.0f;
         a = 0;
-        for( i = 0; i < ENVELOPE_HANDLES; i++ )
+        for (i = 0; i < ENVELOPE_HANDLES; i++)
         {
-        	setVal( i, a );
+            setVal(i, a);
             a += div;
 
-            if( i == 8 )
+            if (i == 8)
                 a = 0.0f;
         }
         break;
     case EnvelopeData::PRESET_SQR:
         a = 0;
-        for( i = 0; i < ENVELOPE_HANDLES; i++ )
+        for (i = 0; i < ENVELOPE_HANDLES; i++)
         {
-        	setVal( i, a );
+            setVal(i, a);
 
-            if( i == 8 )
+            if (i == 8)
                 a = 1.0f;
         }
         break;
@@ -107,139 +107,139 @@ void EnvelopeData::Preset( int preset )
 //-----------------------------------------------------
 // Procedure:   getActualVal
 //-----------------------------------------------------
-float EnvelopeData::getActualVal( float inval )
+float EnvelopeData::getActualVal(float inval)
 {
     float val = 0.0f;
 
-    switch( m_Range )
+    switch (m_Range)
     {
     case EnvelopeData_Ranges::RANGE_0to5:
         val = inval * 5.0f;
         break;
     case EnvelopeData_Ranges::RANGE_n5to5:
-        val = ( ( inval * 2 ) - 1.0 ) * 5.0f;
+        val = ((inval * 2) - 1.0) * 5.0f;
         break;
     case EnvelopeData_Ranges::RANGE_0to10:
         val = inval * 10.0f;
         break;
     case EnvelopeData_Ranges::RANGE_n10to10:
-        val = ( ( inval * 2 ) - 1.0 ) * 10.0f;
+        val = ((inval * 2) - 1.0) * 10.0f;
         break;
     case EnvelopeData_Ranges::RANGE_0to1:
-    	val = inval;
-    	break;
+        val = inval;
+        break;
     case EnvelopeData_Ranges::RANGE_n1to1:
-    	val = ( ( inval * 2 ) - 1.0 );
-    	break;
+        val = ((inval * 2) - 1.0);
+        break;
     case EnvelopeData_Ranges::RANGE_Audio:
-    	val = ( ( inval * 2 ) - 1.0 ) * AUDIO_MAX;
-    	break;
+        val = ((inval * 2) - 1.0) * AUDIO_MAX;
+        break;
     }
 
     return val;
 }
 
 //-----------------------------------------------------
-// Function:    line_from_points				
+// Function:    line_from_points
 //
 //-----------------------------------------------------
-void EnvelopeData::line_from_points( float x1, float y1, float x2, float y2, fLine *L )
+void EnvelopeData::line_from_points(float x1, float y1, float x2, float y2, fLine *L)
 {
     float m;
-	float xdiff, ydiff;
+    float xdiff, ydiff;
 
-    if( !L )
+    if (!L)
         return;
 
-    memset( L, 0, sizeof( fLine ) );
-    L->bSet  = true;
+    memset(L, 0, sizeof(fLine));
+    L->bSet = true;
 
-	xdiff = x2 - x1;
-	xdiff = fabs( xdiff );
+    xdiff = x2 - x1;
+    xdiff = fabs(xdiff);
 
-	ydiff = y2 - y1;
-	ydiff = fabs( ydiff );
+    ydiff = y2 - y1;
+    ydiff = fabs(ydiff);
 
     // line is vertical
-    if( xdiff < 0.000000001 )
+    if (xdiff < 0.000000001)
     {
-        L->fx     = x1;
+        L->fx = x1;
         L->bVert = true;
         return;
     }
-	else if( ydiff < 0.000000001 )
-	{
-		L->fy     = y1;
+    else if (ydiff < 0.000000001)
+    {
+        L->fy = y1;
         L->bHorz = true;
-		return;
-	}
+        return;
+    }
 
-	//normal line
+    // normal line
     m = (y2 - y1) / (x2 - x1);
 
     // point slope form
-	//y = mx + b
+    // y = mx + b
     L->fmx = m;
-    L->fb  = y1 - (m * x1);
+    L->fb = y1 - (m * x1);
 }
 
 //-----------------------------------------------------
 // Procedure:   valfromline
 //-----------------------------------------------------
-float EnvelopeData::valfromline( int handle, float x )
+float EnvelopeData::valfromline(int handle, float x)
 {
     fLine *L;
 
-    if( m_bGateMode )
-        return getActualVal( m_HandleVal[ handle ] );
+    if (m_bGateMode)
+        return getActualVal(m_HandleVal[handle]);
 
-    L = &m_Lines[ handle ];
+    L = &m_Lines[handle];
 
-    if( L->bHorz )
-        return getActualVal( L->fy );
+    if (L->bHorz)
+        return getActualVal(L->fy);
 
-    return getActualVal( (x * L->fmx) + L->fb );
+    return getActualVal((x * L->fmx) + L->fb);
 }
 
 //-----------------------------------------------------
 // Procedure:   recalcLine
 //-----------------------------------------------------
-void EnvelopeData::recalcLine( int handle )
+void EnvelopeData::recalcLine(int handle)
 {
     float fx1, fx2, fy1, fy2;
     int i;
 
     // calc all lines
-    if( handle == -1 )
+    if (handle == -1)
     {
-		for( int h = 0; h < ENVELOPE_DIVISIONS; h++ )
-		{
-			for( int delta = -1; delta < 1; delta++ )
-			{
-				i = ( h + delta ) & 0xF;
+        for (int h = 0; h < ENVELOPE_DIVISIONS; h++)
+        {
+            for (int delta = -1; delta < 1; delta++)
+            {
+                i = (h + delta) & 0xF;
 
-				fx1 = (m_fsegsize * i);
-				fx2 = fx1 + m_fsegsize;
-				fy1 = m_HandleVal[ i ];
-				fy2 = m_HandleVal[ i + 1 ];
+                fx1 = (m_fsegsize * i);
+                fx2 = fx1 + m_fsegsize;
+                fy1 = m_HandleVal[i];
+                fy2 = m_HandleVal[i + 1];
 
-				line_from_points( fx1, fy1, fx2, fy2, &m_Lines[ i ] );
-			}
-		}
+                line_from_points(fx1, fy1, fx2, fy2, &m_Lines[i]);
+            }
+        }
     }
     // calc line before and line after handle
     else
     {
-        for( int delta = -1; delta < 1; delta++ )
+        for (int delta = -1; delta < 1; delta++)
         {
-            i = ( handle + delta ) & 0xF;
+            i = (handle + delta) & 0xF;
 
             fx1 = (m_fsegsize * i);
             fx2 = fx1 + m_fsegsize;
-            fy1 = m_HandleVal[ i ];
-            fy2 = m_HandleVal[ i + 1 ];
+            fy1 = m_HandleVal[i];
+            fy2 = m_HandleVal[i + 1];
 
-            line_from_points( fx1, fy1, fx2, fy2, &m_Lines[ i ] );
+            line_from_points(fx1, fy1, fx2, fy2, &m_Lines[i]);
         }
     }
 }
@@ -247,41 +247,40 @@ void EnvelopeData::recalcLine( int handle )
 //-----------------------------------------------------
 // Procedure:   resetVal
 //-----------------------------------------------------
-void EnvelopeData::resetValAll( float val )
+void EnvelopeData::resetValAll(float val)
 {
-    if( !m_bInitialized )
+    if (!m_bInitialized)
         return;
 
-    for( int i = 0; i < ENVELOPE_HANDLES; i++ )
+    for (int i = 0; i < ENVELOPE_HANDLES; i++)
     {
-        m_HandleVal[ i ] = val;
+        m_HandleVal[i] = val;
     }
 
-    recalcLine( -1 );
+    recalcLine(-1);
 }
 
 //-----------------------------------------------------
 // Procedure:   setVal
 //-----------------------------------------------------
-void EnvelopeData::setVal( int handle, float val )
+void EnvelopeData::setVal(int handle, float val)
 {
-    if( !m_bInitialized )
+    if (!m_bInitialized)
         return;
 
-    m_HandleVal[ handle ] = val;
-    recalcLine( handle );
+    m_HandleVal[handle] = val;
+    recalcLine(handle);
 }
-
 
 //-----------------------------------------------------
 // Procedure:   setMode
 //-----------------------------------------------------
-void EnvelopeData::setMode( int Mode )
+void EnvelopeData::setMode(int Mode)
 {
-    if( !m_bInitialized )
+    if (!m_bInitialized)
         return;
 
-    switch( Mode )
+    switch (Mode)
     {
     case MODE_LOOP:
         m_Clock.state = STATE_RUN;
@@ -298,9 +297,9 @@ void EnvelopeData::setMode( int Mode )
         m_Clock.state = STATE_WAIT_TRIG;
         break;
     case MODE_PINGPONG:
-        if( m_Clock.state == STATE_WAIT_TRIG )
+        if (m_Clock.state == STATE_WAIT_TRIG)
             m_Clock.state = STATE_RUN;
-        else if( m_Clock.state == STATE_WAIT_TRIG_REV )
+        else if (m_Clock.state == STATE_WAIT_TRIG_REV)
             m_Clock.state = STATE_RUN_REV;
 
         break;
@@ -316,68 +315,67 @@ void EnvelopeData::setMode( int Mode )
 //-----------------------------------------------------
 // Procedure:   setDataAll
 //-----------------------------------------------------
-void EnvelopeData::setDataAll( int *pint )
+void EnvelopeData::setDataAll(int *pint)
 {
     int j, count = 0;
 
-    if( !m_bInitialized || !pint )
+    if (!m_bInitialized || !pint)
     {
         return;
     }
 
-	for( j = 0; j < ENVELOPE_HANDLES; j++ )
-	{
-		m_HandleVal[ j ] = clamp( (float)pint[ count++ ] / 10000.0f, 0.0f, 1.0f );
-	}
+    for (j = 0; j < ENVELOPE_HANDLES; j++)
+    {
+        m_HandleVal[j] = clamp((float)pint[count++] / 10000.0f, 0.0f, 1.0f);
+    }
 
     // recalc all lines
-    recalcLine( -1 );
+    recalcLine(-1);
 }
 
 //-----------------------------------------------------
 // Procedure:   getDataAll
 //-----------------------------------------------------
-void EnvelopeData::getDataAll( int *pint )
+void EnvelopeData::getDataAll(int *pint)
 {
     int j, count = 0;
 
-    if( !m_bInitialized || !pint )
+    if (!m_bInitialized || !pint)
     {
         return;
     }
 
-	for( j = 0; j < ENVELOPE_HANDLES; j++ )
-	{
-		pint[ count++ ] = (int)( m_HandleVal[ j ] * 10000.0 );
-	}
+    for (j = 0; j < ENVELOPE_HANDLES; j++)
+    {
+        pint[count++] = (int)(m_HandleVal[j] * 10000.0);
+    }
 }
-
 
 //-----------------------------------------------------
 // Procedure:   process_state
 //-----------------------------------------------------
-bool EnvelopeData::process_state( bool bTrig, bool bHold )
+bool EnvelopeData::process_state(bool bTrig, bool bHold)
 {
-    switch( m_Clock.state )
+    switch (m_Clock.state)
     {
     case STATE_RUN:
     case STATE_RUN_REV:
 
-        if( bHold )
+        if (bHold)
         {
             m_Clock.prevstate = m_Clock.state;
             m_Clock.state = STATE_HOLD;
             break;
         }
-        
+
         // run reverse
-        if( m_Clock.state == STATE_RUN_REV )
+        if (m_Clock.state == STATE_RUN_REV)
         {
             m_Clock.fpos -= m_Clock.syncInc;
 
-            if( m_Clock.fpos <= 0.0f )
+            if (m_Clock.fpos <= 0.0f)
             {
-                switch( m_Mode )
+                switch (m_Mode)
                 {
                 case MODE_TWOSHOT:
                     m_Clock.fpos = 0;
@@ -400,12 +398,13 @@ bool EnvelopeData::process_state( bool bTrig, bool bHold )
         {
             m_Clock.fpos += m_Clock.syncInc;
 
-            if( m_Clock.fpos >= APP->engine->getSampleRate() )
+            if (m_Clock.fpos >= APP->engine->getSampleRate())
             {
-                switch( m_Mode )
+                switch (m_Mode)
                 {
                 case MODE_ONESHOT:
-                    m_Clock.fpos = APP->engine->getSampleRate() - 1.0f;;
+                    m_Clock.fpos = APP->engine->getSampleRate() - 1.0f;
+                    ;
                     m_Clock.state = STATE_WAIT_TRIG;
                     break;
                 case MODE_TWOSHOT:
@@ -426,14 +425,14 @@ bool EnvelopeData::process_state( bool bTrig, bool bHold )
         break;
 
     case STATE_WAIT_TRIG:
-        if( bTrig )
+        if (bTrig)
         {
             m_Clock.fpos = 0;
             m_Clock.state = STATE_RUN;
         }
         break;
     case STATE_WAIT_TRIG_REV:
-        if( bTrig )
+        if (bTrig)
         {
             m_Clock.fpos = APP->engine->getSampleRate();
             m_Clock.state = STATE_RUN_REV;
@@ -441,7 +440,7 @@ bool EnvelopeData::process_state( bool bTrig, bool bHold )
         break;
 
     case STATE_HOLD:
-        if( !bHold )
+        if (!bHold)
         {
             m_Clock.state = m_Clock.prevstate;
             break;
@@ -455,18 +454,18 @@ bool EnvelopeData::process_state( bool bTrig, bool bHold )
 //-----------------------------------------------------
 // Procedure:   procStep
 //-----------------------------------------------------
-float EnvelopeData::procStep( bool bTrig, bool bHold )
+float EnvelopeData::procStep(bool bTrig, bool bHold)
 {
     int handle;
 
-    if( !m_bInitialized )
-    	return 0.0f;
+    if (!m_bInitialized)
+        return 0.0f;
 
-    process_state( bTrig, bHold );
+    process_state(bTrig, bHold);
 
     m_fIndicator = m_Clock.fpos / APP->engine->getSampleRate();
 
-    handle = (int)( m_Clock.fpos / ( APP->engine->getSampleRate() / (float)ENVELOPE_DIVISIONS ) );
+    handle = (int)(m_Clock.fpos / (APP->engine->getSampleRate() / (float)ENVELOPE_DIVISIONS));
 
-    return valfromline( handle, m_fIndicator * m_fsegsize * (float)ENVELOPE_DIVISIONS );
+    return valfromline(handle, m_fIndicator * m_fsegsize * (float)ENVELOPE_DIVISIONS);
 }

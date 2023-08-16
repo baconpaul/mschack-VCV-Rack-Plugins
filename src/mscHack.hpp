@@ -17,15 +17,15 @@ extern Plugin *thePlugin;
 #define TOJSON true
 #define FROMJSON false
 
-void JsonDataInt( bool bTo, std::string strName, json_t *root, int *pdata, int len );
-void JsonDataBool( bool bTo, std::string strName, json_t *root, bool *pdata, int len );
-void JsonDataString( bool bTo, std::string strName, json_t *root, std::string *strText );
-void init_rand( unsigned int seed );
+void JsonDataInt(bool bTo, std::string strName, json_t *root, int *pdata, int len);
+void JsonDataBool(bool bTo, std::string strName, json_t *root, bool *pdata, int len);
+void JsonDataString(bool bTo, std::string strName, json_t *root, std::string *strText);
+void init_rand(unsigned int seed);
 unsigned short srand(void);
 float frand(void);
-float frand_mm( float fmin, float max );
-bool  brand( void );
-bool  frand_perc( float perc );
+float frand_mm(float fmin, float max);
+bool brand(void);
+bool frand_perc(float perc);
 
 ////////////////////
 // module widgets

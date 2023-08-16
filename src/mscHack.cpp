@@ -9,33 +9,33 @@ __attribute__((__visibility__("default"))) void init(rack::Plugin *p)
     /*
     p->addModel( modelSeq_3x16x16 );
     p->addModel( modelXFade );
-    
-    
+
+
     */
 
-    p->addModel( modelCompressor );
-    p->addModel( modelSynthDrums );
-    p->addModel( modelSEQ_6x32x16 );
-    p->addModel( modelMasterClockx4 );
-    //p->addModel( modelMasterClockx8 );  
-    p->addModel( modelSEQ_Envelope_8 );
-    p->addModel( modelSeq_Triad2 );
-    p->addModel( modelARP700 );
-    p->addModel( modelMix_4_0_4 );
-    p->addModel( modelMix_9_3_4 );
-    p->addModel( modelMix_16_4_4 );
-    p->addModel( modelMix_24_4_4 );
-    p->addModel( modelASAF8 );
-    p->addModel( modelPingPong );
-    p->addModel( modelStepDelay );
-    p->addModel( modelOsc_3Ch );
-    p->addModel( modelDronez );
-    p->addModel( modelMorze );
-    p->addModel( modelWindz );
-    p->addModel( modelLorenz );
-    p->addModel( modelAlienz );
-    p->addModel( modelOSC_WaveMorph_3 );
-    p->addModel( modelMaude_221 );
+    p->addModel(modelCompressor);
+    p->addModel(modelSynthDrums);
+    p->addModel(modelSEQ_6x32x16);
+    p->addModel(modelMasterClockx4);
+    // p->addModel( modelMasterClockx8 );
+    p->addModel(modelSEQ_Envelope_8);
+    p->addModel(modelSeq_Triad2);
+    p->addModel(modelARP700);
+    p->addModel(modelMix_4_0_4);
+    p->addModel(modelMix_9_3_4);
+    p->addModel(modelMix_16_4_4);
+    p->addModel(modelMix_24_4_4);
+    p->addModel(modelASAF8);
+    p->addModel(modelPingPong);
+    p->addModel(modelStepDelay);
+    p->addModel(modelOsc_3Ch);
+    p->addModel(modelDronez);
+    p->addModel(modelMorze);
+    p->addModel(modelWindz);
+    p->addModel(modelLorenz);
+    p->addModel(modelAlienz);
+    p->addModel(modelOSC_WaveMorph_3);
+    p->addModel(modelMaude_221);
 }
 
 //-----------------------------------------------------
@@ -46,7 +46,7 @@ __attribute__((__visibility__("default"))) void init(rack::Plugin *p)
 unsigned int Q[4096], c = 362436;
 unsigned int g_myrindex = 4095;
 
-void init_rand( unsigned int seed )
+void init_rand(unsigned int seed)
 {
     int i;
 
@@ -55,7 +55,7 @@ void init_rand( unsigned int seed )
     Q[2] = seed + PHI + PHI;
 
     for (i = 3; i < 4096; i++)
-            Q[i] = Q[i - 3] ^ Q[i - 2] ^ PHI ^ i;
+        Q[i] = Q[i - 3] ^ Q[i - 2] ^ PHI ^ i;
 
     c = 362436;
     g_myrindex = 4095;
@@ -63,7 +63,7 @@ void init_rand( unsigned int seed )
 
 unsigned short srand(void)
 {
-	long long t, a = 18782LL;
+    long long t, a = 18782LL;
     unsigned int x, r = 0xfffffffe;
 
     g_myrindex = (g_myrindex + 1) & 4095;
@@ -77,109 +77,100 @@ unsigned short srand(void)
         c++;
     }
 
-    return (unsigned short)( ( Q[g_myrindex] = r - x ) & 0xFFFF );
+    return (unsigned short)((Q[g_myrindex] = r - x) & 0xFFFF);
 }
 
-float frand(void)
+float frand(void) { return (float)srand() / (float)0xFFFF; }
+
+float frand_mm(float fmin, float fmax)
 {
-	return (float)srand() / (float)0xFFFF;
+    float range = fmax - fmin;
+
+    return fmin + (frand() * range);
 }
 
-float frand_mm( float fmin, float fmax )
-{
-	float range = fmax - fmin;
+bool brand(void) { return (srand() & 1); }
 
-	return fmin + ( frand() * range );
-}
-
-bool brand( void )
-{
-	return ( srand() & 1 );
-}
-
-bool frand_perc( float perc )
-{
-	return ( frand() <= (perc / 100.0f) );
-}
+bool frand_perc(float perc) { return (frand() <= (perc / 100.0f)); }
 
 //-----------------------------------------------------
-// Procedure: JsonDataInt  
+// Procedure: JsonDataInt
 //
 //-----------------------------------------------------
-void JsonDataInt( bool bTo, std::string strName, json_t *root, int *pdata, int len )
+void JsonDataInt(bool bTo, std::string strName, json_t *root, int *pdata, int len)
 {
     int i;
     json_t *jsarray, *js;
 
-    if( !pdata || !root || len <= 0 )
+    if (!pdata || !root || len <= 0)
         return;
 
-    if( bTo )
+    if (bTo)
     {
         jsarray = json_array();
 
-        for ( i = 0; i < len; i++ )
+        for (i = 0; i < len; i++)
         {
-	        js = json_integer( pdata[ i ] );
-	        json_array_append_new( jsarray, js );
+            js = json_integer(pdata[i]);
+            json_array_append_new(jsarray, js);
         }
 
-        json_object_set_new( root, strName.c_str(), jsarray );
+        json_object_set_new(root, strName.c_str(), jsarray);
     }
     else
     {
-        jsarray = json_object_get( root, strName.c_str() );
+        jsarray = json_object_get(root, strName.c_str());
 
-        if( jsarray )
+        if (jsarray)
         {
-		    for ( i = 0; i < len; i++)
+            for (i = 0; i < len; i++)
             {
-			    js = json_array_get( jsarray, i );
+                js = json_array_get(jsarray, i);
 
-			    if( js )
-				    pdata[ i ] = json_integer_value( js );
-		    }
+                if (js)
+                    pdata[i] = json_integer_value(js);
+            }
         }
     }
 }
 
 //-----------------------------------------------------
-// Procedure: JsonDataBool  
+// Procedure: JsonDataBool
 //
 //-----------------------------------------------------
-void JsonDataBool( bool bTo, std::string strName, json_t *root, bool *pdata, int len )
+void JsonDataBool(bool bTo, std::string strName, json_t *root, bool *pdata, int len)
 {
     int i;
     json_t *jsarray, *js;
 
-    if( !pdata || !root || len <= 0 )
+    if (!pdata || !root || len <= 0)
         return;
 
-    if( bTo )
+    if (bTo)
     {
         jsarray = json_array();
 
-        for ( i = 0; i < len; i++ )
+        for (i = 0; i < len; i++)
         {
-	        js = json_boolean( pdata[ i ] );
-	        json_array_append_new( jsarray, js );
+            js = json_boolean(pdata[i]);
+            json_array_append_new(jsarray, js);
         }
 
-        json_object_set_new( root, strName.c_str(), jsarray );
+        json_object_set_new(root, strName.c_str(), jsarray);
     }
     else
     {
-        jsarray = json_object_get( root, strName.c_str() );
+        jsarray = json_object_get(root, strName.c_str());
 
-        if( jsarray )
+        if (jsarray)
         {
-		    for ( i = 0; i < len; i++)
+            for (i = 0; i < len; i++)
             {
-			    js = json_array_get( jsarray, i );
+                js = json_array_get(jsarray, i);
 
-			    if( js )
-				    pdata[ i ] = json_boolean_value( js );
-		    }
+                if (js)
+                    pdata[i] = json_boolean_value(js);
+            }
         }
     }
 }
@@ -188,22 +179,22 @@ void JsonDataBool( bool bTo, std::string strName, json_t *root, bool *pdata, int
 // Procedure: JsonDataString
 //
 //-----------------------------------------------------
-void JsonDataString( bool bTo, std::string strName, json_t *root, std::string *strText )
+void JsonDataString(bool bTo, std::string strName, json_t *root, std::string *strText)
 {
     json_t *textJ;
 
-    if( !root )
+    if (!root)
         return;
 
-    if( bTo )
+    if (bTo)
     {
-    	json_object_set_new( root, strName.c_str(), json_string( strText->c_str() ) );
+        json_object_set_new(root, strName.c_str(), json_string(strText->c_str()));
     }
     else
     {
-    	textJ = json_object_get( root, strName.c_str() );
+        textJ = json_object_get(root, strName.c_str());
 
-		if( textJ )
-			*strText = json_string_value( textJ );
+        if (textJ)
+            *strText = json_string_value(textJ);
     }
 }
