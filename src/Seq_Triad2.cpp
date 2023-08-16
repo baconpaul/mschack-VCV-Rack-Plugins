@@ -1,4 +1,4 @@
-﻿#include "mscHack.hpp"
+#include "mscHack.hpp"
 
 #define nKEYBOARDS 3
 #define nKEYS 37

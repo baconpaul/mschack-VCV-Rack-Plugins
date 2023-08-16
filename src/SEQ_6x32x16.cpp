@@ -1,4 +1,4 @@
-﻿#include "mscHack.hpp"
+#include "mscHack.hpp"
 
 #define nCHANNELS 6
 #define nSTEPS 32

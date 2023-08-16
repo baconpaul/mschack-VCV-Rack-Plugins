@@ -1,4 +1,4 @@
-﻿#include "mscHack.hpp"
+#include "mscHack.hpp"
 
 #define nAUX 4
 #define nEQ 3

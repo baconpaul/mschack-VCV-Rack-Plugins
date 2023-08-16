@@ -1,4 +1,4 @@
-﻿#include "mscHack.hpp"
+#include "mscHack.hpp"
 
 typedef struct
 {

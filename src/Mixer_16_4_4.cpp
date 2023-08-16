@@ -1,4 +1,4 @@
-﻿#define nCHANNELS 24
+#define nCHANNELS 24
 #define nINCHANNELS 16
 #define nGROUPS 4
 
