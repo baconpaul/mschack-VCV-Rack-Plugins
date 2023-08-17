@@ -167,7 +167,7 @@
     },
     {
       "slug": "Lorenz",
-      "name": "(Untested) Lorenz",
+      "name": "Lorenz",
       "description": "Lorenz Attractor",
       "tags": [
         "Random",
@@ -203,7 +203,7 @@
 
     {
       "slug": "Maude221",
-      "name": "(Crashes) Maude Two to One",
+      "name": "(Untested) Maude Two to One",
       "description": "Rectify/Combine 2 mono signals",
       "tags": [
         "Waveshaper"

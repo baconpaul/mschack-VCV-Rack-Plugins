@@ -85,15 +85,13 @@ struct Lorenz : Module
 
     FILTER_STRUCT m_Filter = {};
     int m_FilterState = 0;
-    MyLEDButton *m_pButtonFilterType[FILTER_HP] = {};
-
-    Widget_LineImage *m_pImageWidget = NULL;
 
     float m_x = 0.0f, m_y = 1.0f, m_z = 0.0f;
 
     MOVING_AVG m_DCAvg = {};
 
     // Label           *m_pTextLabel = NULL;
+    rack::dsp::RingBuffer<std::pair<float, float>, 8192 * 8> drawQ;
 
     // Contructor
     Lorenz()
@@ -153,11 +151,6 @@ void Lorenz_FilterSelect(void *pClass, int id, bool bOn)
     }
     else
     {
-        for (int i = 0; i < Lorenz::FILTER_HP; i++)
-        {
-            if (i != id)
-                m->m_pButtonFilterType[i]->Set(false);
-        }
 
         m->m_FilterState = id + 1;
     }
@@ -170,6 +163,8 @@ void Lorenz_FilterSelect(void *pClass, int id, bool bOn)
 
 struct Lorenz_Widget : ModuleWidget
 {
+    MyLEDButton *m_pButtonFilterType[Lorenz::FILTER_HP]{};
+    Widget_LineImage *m_pImageWidget{nullptr};
 
     Lorenz_Widget(Lorenz *module)
     {
@@ -179,15 +174,12 @@ struct Lorenz_Widget : ModuleWidget
 
         setModule(module);
 
-        if (!module)
-            pmod = &LorenzBrowser;
-        else
-            pmod = module;
+        pmod = module;
 
         setPanel(APP->window->loadSvg(asset::plugin(thePlugin, "res/Lorenz.svg")));
 
-        pmod->m_pImageWidget = new Widget_LineImage(5, 15, nDISPLAY_WIDTH, nDISPLAY_HEIGHT);
-        addChild(pmod->m_pImageWidget);
+        m_pImageWidget = new Widget_LineImage(5, 15, nDISPLAY_WIDTH, nDISPLAY_HEIGHT);
+        addChild(m_pImageWidget);
 
         // pmod->m_pTextLabel = new Label();
         // pmod->m_pTextLabel->box.pos = Vec( 88, 249 );
@@ -239,10 +231,10 @@ struct Lorenz_Widget : ModuleWidget
         // filter type buttons
         for (i = 0; i < 3; i++)
         {
-            pmod->m_pButtonFilterType[i] = new MyLEDButton(
-                146 + x, y, 10, 10, 8.0f, DWRGB(180, 180, 180), DWRGB(255, 255, 255),
-                MyLEDButton::TYPE_SWITCH, i, module, Lorenz_FilterSelect);
-            addChild(pmod->m_pButtonFilterType[i]);
+            m_pButtonFilterType[i] = new MyLEDButton(146 + x, y, 10, 10, 8.0f, DWRGB(180, 180, 180),
+                                                     DWRGB(255, 255, 255), MyLEDButton::TYPE_SWITCH,
+                                                     i, module, Lorenz_FilterSelect);
+            addChild(m_pButtonFilterType[i]);
             y += 23;
         }
 
@@ -262,8 +254,28 @@ struct Lorenz_Widget : ModuleWidget
         if (module)
         {
             module->m_bInitialized = true;
-            module->onReset();
         }
+    }
+
+    void step() override
+    {
+        auto az = dynamic_cast<Lorenz *>(module);
+        if (az)
+        {
+            auto id = az->m_FilterState - 1;
+
+            for (int i = 0; i < Lorenz::FILTER_HP; i++)
+            {
+                m_pButtonFilterType[i]->Set(i == id);
+            }
+
+            while (!az->drawQ.empty())
+            {
+                auto nxt = az->drawQ.shift();
+                m_pImageWidget->addQ(nxt.first, nxt.second);
+            }
+        }
+        Widget::step();
     }
 };
 
@@ -296,17 +308,7 @@ json_t *Lorenz::dataToJson()
 // Procedure:   fromJson
 //
 //-----------------------------------------------------
-void Lorenz::dataFromJson(json_t *root)
-{
-    JsonParams(FROMJSON, root);
-
-    if (m_FilterState == FILTER_LP)
-        m_pButtonFilterType[0]->Set(true);
-    else if (m_FilterState == FILTER_BP)
-        m_pButtonFilterType[1]->Set(true);
-    else if (m_FilterState == FILTER_HP)
-        m_pButtonFilterType[2]->Set(true);
-}
+void Lorenz::dataFromJson(json_t *root) { JsonParams(FROMJSON, root); }
 
 //-----------------------------------------------------
 // Procedure:   onReset
@@ -318,10 +320,6 @@ void Lorenz::onReset()
         return;
 
     m_FilterState = FILTER_OFF;
-
-    m_pButtonFilterType[0]->Set(false);
-    m_pButtonFilterType[1]->Set(false);
-    m_pButtonFilterType[2]->Set(false);
 
     m_x = 0.0f, m_y = 1.0f, m_z = 0.0f;
 }
@@ -471,8 +469,7 @@ void Lorenz::process(const ProcessArgs &args)
         return;
     }*/
 
-    m_pImageWidget->addQ(x, y);
-
+    drawQ.push({x, y});
     /*if( ++bla >= 4000 )
     {
         bla = 0;
