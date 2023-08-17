@@ -79,7 +79,7 @@
 
     {
       "slug": "PingPong_Widget",
-      "name": "(Untested) Ping Pong",
+      "name": "Ping Pong",
       "description": "Ping Pong Delay",
       "tags": [
         "Delay"
@@ -150,7 +150,7 @@
     },
     {
       "slug": "Alienz",
-      "name": "(Untested) Alienz",
+      "name": "Alienz",
       "description": "Alien transmissions",
       "tags": [
         "Oscillator"

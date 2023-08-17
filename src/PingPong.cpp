@@ -87,8 +87,6 @@ struct PingPong : Module
     int m_LastDelayKnob[2] = {};
     bool m_bWasSynced = false;
 
-    MyLEDButton *m_pButtonReverse = NULL;
-
     // Contructor
     PingPong()
     {
@@ -115,8 +113,6 @@ struct PingPong : Module
     void ChangeFilterCutoff(float cutfreq);
     float Filter(int ch, float in);
 };
-
-PingPong PingPongBrowser;
 
 //-----------------------------------------------------
 // PingPong_Reverse
@@ -172,6 +168,7 @@ struct MyCutoffKnob : Knob_Green1_40
 
 struct PingPong_Widget : ModuleWidget
 {
+    MyLEDButton *m_pButtonReverse{nullptr};
 
     PingPong_Widget(PingPong *module)
     {
@@ -180,11 +177,6 @@ struct PingPong_Widget : ModuleWidget
         // box.size = Vec( 15*8, 380);
 
         setModule(module);
-
-        if (!module)
-            pmod = &PingPongBrowser;
-        else
-            pmod = module;
 
         setPanel(APP->window->loadSvg(asset::plugin(thePlugin, "res/PingPong.svg")));
 
@@ -228,13 +220,26 @@ struct PingPong_Widget : ModuleWidget
         // reverse button
         addInput(createInput<MyPortInSmall>(Vec(3, 340), module, PingPong::INPUT_GNIP_TOGGLE));
 
-        pmod->m_pButtonReverse =
+        m_pButtonReverse =
             new MyLEDButton(24, 343, 11, 11, 8.0, DWRGB(180, 180, 180), DWRGB(255, 255, 0),
                             MyLEDButton::TYPE_SWITCH, 0, module, PingPong_Reverse);
-        addChild(pmod->m_pButtonReverse);
+        addChild(m_pButtonReverse);
 
         if (module)
             module->m_bInitialized = true;
+    }
+
+    void step() override
+    {
+        auto az = dynamic_cast<PingPong *>(module);
+        if (az)
+        {
+            if (m_pButtonReverse->m_bOn != az->m_bReverseState)
+            {
+                m_pButtonReverse->Set(az->m_bReverseState);
+            }
+        }
+        Widget::step();
     }
 };
 
@@ -247,7 +252,6 @@ void PingPong::onReset()
     if (!m_bInitialized)
         return;
 
-    m_pButtonReverse->Set(false);
     m_bReverseState = false;
 }
 
@@ -276,8 +280,6 @@ void PingPong::dataFromJson(json_t *rootJ)
 
     if (revJ)
         m_bReverseState = json_is_true(revJ);
-
-    m_pButtonReverse->Set(m_bReverseState);
 }
 
 //-----------------------------------------------------
@@ -388,12 +390,7 @@ void PingPong::process(const ProcessArgs &args)
 
     if (m_SchmittReverse.process(inputs[INPUT_GNIP_TOGGLE].getVoltage()))
     {
-        if (m_pButtonReverse->m_bOn)
-            m_pButtonReverse->Set(false);
-        else
-            m_pButtonReverse->Set(true);
-
-        m_bReverseState = m_pButtonReverse->m_bOn;
+        m_bReverseState = !m_bReverseState;
     }
 
     // check right channel first for possible mono

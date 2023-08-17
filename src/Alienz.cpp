@@ -178,8 +178,6 @@ struct Alienz : Module
     void onRandomize() override;
 };
 
-Alienz AlienzBrowser;
-
 //-----------------------------------------------------
 // Alienz_SeedButton
 //-----------------------------------------------------
