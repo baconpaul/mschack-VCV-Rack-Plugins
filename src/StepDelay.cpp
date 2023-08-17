@@ -1,4 +1,5 @@
 #include "mscHack.hpp"
+#include <array>
 
 #define nDELAYS 8
 #define nSTEPS 4
@@ -21,11 +22,10 @@ typedef struct
 
 } MAIN_SYNC_CLOCK;
 
-typedef struct
+struct FILTER_PARAM_STRUCT
 {
     float lp1[2] = {}, bp1[2] = {};
-
-} FILTER_PARAM_STRUCT;
+};
 
 //-----------------------------------------------------
 // Module Definition
@@ -102,13 +102,12 @@ struct StepDelay : Module
     dsp::SchmittTrigger m_SchTrigGlobalClkReset;
     bool m_GlobalClkResetPending = false;
 
-    Label *m_pTextLabel[nSTEPS] = {};
-
-    MyLEDButtonStrip *m_pButtonLenMod[nSTEPS] = {};
     int m_lenmod[nSTEPS] = {0};
 
     FILTER_PARAM_STRUCT m_Filter = {};
     float m_fCutoff;
+
+    std::string m_sDelay[nSTEPS];
 
 #define L 0
 #define R 1
@@ -150,8 +149,6 @@ struct StepDelay : Module
     void CalcDelays(void);
 };
 
-StepDelay StepDelayBrowser;
-
 //-----------------------------------------------------
 // Procedure:   LenModCallback
 //-----------------------------------------------------
@@ -174,18 +171,14 @@ void LenModCallback(void *pClass, int id, int nbutton, bool bOn)
 
 struct StepDelay_Widget : ModuleWidget
 {
+    MyLEDButtonStrip *m_pButtonLenMod[nSTEPS]{};
+    Label *m_pTextLabel[nSTEPS]{};
 
     StepDelay_Widget(StepDelay *module)
     {
         int steps, x, y;
-        StepDelay *pmod;
 
         setModule(module);
-
-        if (!module)
-            pmod = &StepDelayBrowser;
-        else
-            pmod = module;
 
         // box.size = Vec( 15*14, 380 );
         setPanel(APP->window->loadSvg(asset::plugin(thePlugin, "res/StepDelay.svg")));
@@ -235,18 +228,18 @@ struct StepDelay_Widget : ModuleWidget
             addParam(createParam<StepDelay::MyDelayKnob>(Vec(x, y), module,
                                                          StepDelay::PARAM_DELAY + steps));
 
-            pmod->m_pTextLabel[steps] = new Label();
-            pmod->m_pTextLabel[steps]->box.pos = Vec(x - 9, y + 18);
-            pmod->m_pTextLabel[steps]->text = "Delay";
+            m_pTextLabel[steps] = new Label();
+            m_pTextLabel[steps]->box.pos = Vec(x - 9, y + 18);
+            m_pTextLabel[steps]->text = "Delay";
             // module->m_pTextLabel[ steps ]->
-            addChild(pmod->m_pTextLabel[steps]);
+            addChild(m_pTextLabel[steps]);
 
             y += 38;
 
-            pmod->m_pButtonLenMod[steps] = new MyLEDButtonStrip(
+            m_pButtonLenMod[steps] = new MyLEDButtonStrip(
                 x + 4, y, 12, 12, 2, 10.0, 2, true, DWRGB(180, 180, 180), DWRGB(255, 255, 0),
                 MyLEDButtonStrip::TYPE_EXCLUSIVE_WOFF, steps, module, LenModCallback);
-            addChild(pmod->m_pButtonLenMod[steps]);
+            addChild(m_pButtonLenMod[steps]);
 
             x += 28;
         }
@@ -257,6 +250,24 @@ struct StepDelay_Widget : ModuleWidget
             module->CalcDelays();
             module->m_bInitialized = true;
         }
+    }
+
+    void step() override
+    {
+        auto az = dynamic_cast<StepDelay *>(module);
+        if (az)
+        {
+            for (int i = 0; i < nSTEPS; ++i)
+            {
+                if (m_pTextLabel[i]->text != az->m_sDelay[i])
+                    m_pTextLabel[i]->text = az->m_sDelay[i];
+            }
+            for (int i = 0; i < nSTEPS; i++)
+            {
+                m_pButtonLenMod[i]->Set(az->m_lenmod[i], true);
+            }
+        }
+        Widget::step();
     }
 };
 
@@ -292,11 +303,6 @@ json_t *StepDelay::dataToJson()
 void StepDelay::dataFromJson(json_t *root)
 {
     JsonParams(FROMJSON, root);
-
-    for (int i = 0; i < nSTEPS; i++)
-    {
-        m_pButtonLenMod[i]->Set(m_lenmod[i], true);
-    }
 
     CalcDelays();
 }
@@ -425,8 +431,7 @@ void StepDelay::CalcDelays(void)
     {
         delay = (int)params[PARAM_DELAY + i].getValue();
 
-        if (m_pTextLabel[i])
-            m_pTextLabel[i]->text = strDelay[delay];
+        m_sDelay[i] = strDelay[delay];
 
         if (delay)
         {
