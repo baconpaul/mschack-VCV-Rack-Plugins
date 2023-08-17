@@ -215,12 +215,11 @@
 
     {
       "slug": "Maude221",
-      "name": "(Untested) Maude Two to One",
+      "name": "Maude Two to One",
       "description": "Rectify/Combine 2 mono signals",
       "tags": [
         "Waveshaper"
-      ],
-      "hidden": true
+      ]
     }
   ]
 }

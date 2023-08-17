@@ -49,11 +49,7 @@ struct Maude_221 : Module
         configParam(PARAM_CVAMTB, 0.0, 1.0, 0.0, "CVB Amount");
     }
 
-    MyLEDButtonStrip *m_pInputA_RectMode = NULL;
-    MyLEDButtonStrip *m_pInputB_RectMode = NULL;
-    MyLEDButtonStrip *m_pOutputC_RectMode = NULL;
-
-    int m_RectMode[3] = {0};
+    int m_RectMode[3]{1, 1, 2};
 
     // Overrides
     void process(const ProcessArgs &args) override;
@@ -61,8 +57,6 @@ struct Maude_221 : Module
     json_t *dataToJson() override;
     void dataFromJson(json_t *rootJ) override;
 };
-
-Maude_221 Maude_221Browser;
 
 //-----------------------------------------------------
 // Procedure:   Maude_221_RectSelect
@@ -85,17 +79,13 @@ void Maude_221_RectSelect(void *pClass, int id, int nbutton, bool bOn)
 
 struct Maude_221_Widget : ModuleWidget
 {
+    MyLEDButtonStrip *m_pInputA_RectMode = NULL;
+    MyLEDButtonStrip *m_pInputB_RectMode = NULL;
+    MyLEDButtonStrip *m_pOutputC_RectMode = NULL;
 
     Maude_221_Widget(Maude_221 *module)
     {
-        Maude_221 *pmod;
-
         setModule(module);
-
-        if (!module)
-            pmod = &Maude_221Browser;
-        else
-            pmod = module;
 
         // box.size = Vec( 15*8, 380 );
         setPanel(APP->window->loadSvg(asset::plugin(thePlugin, "res/Maude221.svg")));
@@ -109,15 +99,15 @@ struct Maude_221_Widget : ModuleWidget
         addInput(createInput<MyPortInSmall>(Vec(79, 48), module, Maude_221::INPUTB));
 
         // rectify mode
-        pmod->m_pInputA_RectMode = new MyLEDButtonStrip(
+        m_pInputA_RectMode = new MyLEDButtonStrip(
             15, 81, 12, 12, 0, 11.5, 3, false, DWRGB(0, 0, 0), DWRGB(180, 180, 180),
             MyLEDButtonStrip::TYPE_EXCLUSIVE, 0, module, Maude_221_RectSelect);
-        addChild(pmod->m_pInputA_RectMode);
+        addChild(m_pInputA_RectMode);
 
-        pmod->m_pInputB_RectMode = new MyLEDButtonStrip(
+        m_pInputB_RectMode = new MyLEDButtonStrip(
             71, 81, 12, 12, 0, 11.5, 3, false, DWRGB(0, 0, 0), DWRGB(180, 180, 180),
             MyLEDButtonStrip::TYPE_EXCLUSIVE, 1, module, Maude_221_RectSelect);
-        addChild(pmod->m_pInputB_RectMode);
+        addChild(m_pInputB_RectMode);
 
         // limit knobs
         addParam(createParam<Knob_Green1_40>(Vec(12, 106), module, Maude_221::PARAM_LIMIT_INA));
@@ -135,10 +125,10 @@ struct Maude_221_Widget : ModuleWidget
         addParam(createParam<Knob_Blue2_26_Snap>(Vec(47, 188), module, Maude_221::PARAM_MODE));
 
         // output rectify mode select
-        pmod->m_pOutputC_RectMode = new MyLEDButtonStrip(
+        m_pOutputC_RectMode = new MyLEDButtonStrip(
             32, 248, 12, 12, 0, 11.5, 5, false, DWRGB(0, 0, 0), DWRGB(180, 180, 180),
             MyLEDButtonStrip::TYPE_EXCLUSIVE, 2, module, Maude_221_RectSelect);
-        addChild(pmod->m_pOutputC_RectMode);
+        addChild(m_pOutputC_RectMode);
 
         // output amp
         addParam(createParam<Knob_Green1_40>(Vec(40, 273), module, Maude_221::PARAM_AMP_OUTC));
@@ -151,15 +141,20 @@ struct Maude_221_Widget : ModuleWidget
 
         if (module)
         {
-            module->m_pInputA_RectMode->Set(1, true);
-            module->m_pInputB_RectMode->Set(1, true);
-            module->m_pOutputC_RectMode->Set(1, true);
-            module->m_RectMode[0] = 1;
-            module->m_RectMode[1] = 1;
-            module->m_RectMode[2] = 1;
-
             module->m_bInitialized = true;
         }
+    }
+
+    void step() override
+    {
+        auto az = dynamic_cast<Maude_221 *>(module);
+        if (az)
+        {
+            m_pInputA_RectMode->Set(az->m_RectMode[0], true);
+            m_pInputB_RectMode->Set(az->m_RectMode[1], true);
+            m_pOutputC_RectMode->Set(az->m_RectMode[2], true);
+        }
+        Widget::step();
     }
 };
 
@@ -192,14 +187,7 @@ json_t *Maude_221::dataToJson()
 // Procedure:   fromJson
 //
 //-----------------------------------------------------
-void Maude_221::dataFromJson(json_t *root)
-{
-    JsonParams(FROMJSON, root);
-
-    m_pInputA_RectMode->Set(m_RectMode[0], true);
-    m_pInputB_RectMode->Set(m_RectMode[1], true);
-    m_pOutputC_RectMode->Set(m_RectMode[2], true);
-}
+void Maude_221::dataFromJson(json_t *root) { JsonParams(FROMJSON, root); }
 
 //-----------------------------------------------------
 // Procedure:   step
