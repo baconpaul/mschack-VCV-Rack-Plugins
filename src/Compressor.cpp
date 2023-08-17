@@ -53,13 +53,8 @@ struct Compressor : Module
 
     bool m_bInitialized = false;
 
-    LEDMeterWidget *m_pLEDMeterIn[2] = {0};
-    CompressorLEDMeterWidget *m_pLEDMeterThreshold = NULL;
-    CompressorLEDMeterWidget *m_pLEDMeterComp[2] = {0};
-    LEDMeterWidget *m_pLEDMeterOut[2] = {0};
 
     bool m_bBypass = false;
-    MyLEDButton *m_pButtonBypass = NULL;
 
     COMP_STATE m_CompL = {};
     COMP_STATE m_CompR = {};
@@ -80,6 +75,9 @@ struct Compressor : Module
         configParam(PARAM_SIDE_CHAIN, 0.0f, 1.0f, 0.0f, "Fade In Speed");
     }
 
+    typedef rack::dsp::RingBuffer<float, 8192*4> rbuf_t;
+    rbuf_t m_rbLEDMeterIn[2], m_rbLEDMeterComp[2], m_rbLEDMeterThreshold, m_rbLEDMeterOut[2];
+
     // Overrides
     void process(const ProcessArgs &args) override;
     json_t *dataToJson() override;
@@ -88,8 +86,6 @@ struct Compressor : Module
     bool ProcessCompState(COMP_STATE *pComp, bool bAboveThreshold);
     float Compress(float *pDetectInL, float *pDetectInR);
 };
-
-Compressor CompressorBrowser;
 
 //-----------------------------------------------------
 // Compressor_Bypass
@@ -108,21 +104,19 @@ void Compressor_Bypass(void *pClass, int id, bool bOn)
 
 struct Compressor_Widget : ModuleWidget
 {
+    LEDMeterWidget *m_pLEDMeterIn[2]{0,0};
+    CompressorLEDMeterWidget *m_pLEDMeterThreshold{nullptr};
+    CompressorLEDMeterWidget *m_pLEDMeterComp[2]{0,0};
+    LEDMeterWidget *m_pLEDMeterOut[2]{0,0};
+    MyLEDButton *m_pButtonBypass{nullptr};
 
     Compressor_Widget(Compressor *module)
     {
         int x, y, y2;
 
-        Compressor *pmod;
-
         // box.size = Vec( 15*8, 380);
 
         setModule(module);
-
-        if (!module)
-            pmod = &CompressorBrowser;
-        else
-            pmod = module;
 
         setPanel(APP->window->loadSvg(asset::plugin(thePlugin, "res/Compressor.svg")));
 
@@ -135,10 +129,10 @@ struct Compressor_Widget : ModuleWidget
         addChild(createWidget<ScrewSilver>(Vec(box.size.x - 30, 365)));
 
         // bypass switch
-        pmod->m_pButtonBypass =
+        m_pButtonBypass =
             new MyLEDButton(x, y, 11, 11, 8.0, DWRGB(180, 180, 180), DWRGB(255, 0, 0),
                             MyLEDButton::TYPE_SWITCH, 0, module, Compressor_Bypass);
-        addChild(pmod->m_pButtonBypass);
+        addChild(m_pButtonBypass);
 
         // audio inputs
         addInput(createInput<MyPortInSmall>(Vec(x, y + 32), module, Compressor::IN_AUDIOL));
@@ -147,26 +141,26 @@ struct Compressor_Widget : ModuleWidget
             createInput<MyPortInSmall>(Vec(x - 1, y + 210), module, Compressor::IN_SIDE_CHAIN));
 
         // LED meters
-        pmod->m_pLEDMeterIn[0] = new LEDMeterWidget(x + 22, y + 25, 5, 3, 2, true);
-        addChild(pmod->m_pLEDMeterIn[0]);
-        pmod->m_pLEDMeterIn[1] = new LEDMeterWidget(x + 28, y + 25, 5, 3, 2, true);
-        addChild(pmod->m_pLEDMeterIn[1]);
+        m_pLEDMeterIn[0] = new LEDMeterWidget(x + 22, y + 25, 5, 3, 2, true);
+        addChild(m_pLEDMeterIn[0]);
+        m_pLEDMeterIn[1] = new LEDMeterWidget(x + 28, y + 25, 5, 3, 2, true);
+        addChild(m_pLEDMeterIn[1]);
 
-        pmod->m_pLEDMeterThreshold = new CompressorLEDMeterWidget(
+        m_pLEDMeterThreshold = new CompressorLEDMeterWidget(
             true, x + 39, y + 25, 5, 3, DWRGB(245, 10, 174), DWRGB(96, 4, 68));
-        addChild(pmod->m_pLEDMeterThreshold);
+        addChild(m_pLEDMeterThreshold);
 
-        pmod->m_pLEDMeterComp[0] = new CompressorLEDMeterWidget(
+        m_pLEDMeterComp[0] = new CompressorLEDMeterWidget(
             true, x + 48, y + 25, 5, 3, DWRGB(0, 128, 255), DWRGB(0, 64, 128));
-        addChild(pmod->m_pLEDMeterComp[0]);
-        pmod->m_pLEDMeterComp[1] = new CompressorLEDMeterWidget(
+        addChild(m_pLEDMeterComp[0]);
+        m_pLEDMeterComp[1] = new CompressorLEDMeterWidget(
             true, x + 55, y + 25, 5, 3, DWRGB(0, 128, 255), DWRGB(0, 64, 128));
-        addChild(pmod->m_pLEDMeterComp[1]);
+        addChild(m_pLEDMeterComp[1]);
 
-        pmod->m_pLEDMeterOut[0] = new LEDMeterWidget(x + 65, y + 25, 5, 3, 2, true);
-        addChild(pmod->m_pLEDMeterOut[0]);
-        pmod->m_pLEDMeterOut[1] = new LEDMeterWidget(x + 72, y + 25, 5, 3, 2, true);
-        addChild(pmod->m_pLEDMeterOut[1]);
+        m_pLEDMeterOut[0] = new LEDMeterWidget(x + 65, y + 25, 5, 3, 2, true);
+        addChild(m_pLEDMeterOut[0]);
+        m_pLEDMeterOut[1] = new LEDMeterWidget(x + 72, y + 25, 5, 3, 2, true);
+        addChild(m_pLEDMeterOut[1]);
 
         // audio  outputs
         addOutput(
@@ -193,6 +187,35 @@ struct Compressor_Widget : ModuleWidget
 
         if (module)
             module->m_bInitialized = true;
+    }
+
+
+    void step() override
+    {
+        auto az = dynamic_cast<Compressor *>(module);
+        if (az)
+        {
+            auto apply = [](auto &rb, auto *wid)
+            {
+                while (!rb.empty())
+                {
+                    auto f = rb.shift();
+                    wid->Process(f);
+                }
+            };
+
+            apply(az->m_rbLEDMeterIn[0], m_pLEDMeterIn[0]);
+            apply(az->m_rbLEDMeterIn[1], m_pLEDMeterIn[1]);
+            apply(az->m_rbLEDMeterComp[0], m_pLEDMeterComp[0]);
+            apply(az->m_rbLEDMeterComp[1], m_pLEDMeterComp[1]);
+            apply(az->m_rbLEDMeterThreshold, m_pLEDMeterThreshold);
+            apply(az->m_rbLEDMeterOut[0], m_pLEDMeterOut[0]);
+            apply(az->m_rbLEDMeterOut[1], m_pLEDMeterOut[1]);
+
+            if (m_pButtonBypass->m_bOn != az->m_bBypass)
+                m_pButtonBypass->Set(az->m_bBypass);
+        }
+        Widget::step();
     }
 };
 
@@ -221,8 +244,6 @@ void Compressor::dataFromJson(json_t *rootJ)
 
     if (revJ)
         m_bBypass = json_is_true(revJ);
-
-    m_pButtonBypass->Set(m_bBypass);
 }
 
 //-----------------------------------------------------
@@ -356,8 +377,8 @@ void Compressor::process(const ProcessArgs &args)
     if (!m_bInitialized)
         return;
 
-    outL = inputs[IN_AUDIOL].getNormalVoltage(0.0) / AUDIO_MAX;
-    outR = inputs[IN_AUDIOR].getNormalVoltage(0.0) / AUDIO_MAX;
+    outL = inputs[IN_AUDIOL].getVoltageSum() / AUDIO_MAX;
+    outR = inputs[IN_AUDIOR].getVoltageSum() / AUDIO_MAX;
 
     if (!m_bBypass)
     {
@@ -365,11 +386,8 @@ void Compressor::process(const ProcessArgs &args)
         outR = clamp(outR * params[PARAM_INGAIN].getValue(), -1.0f, 1.0f);
     }
 
-    if (m_pLEDMeterIn[0])
-        m_pLEDMeterIn[0]->Process(outL);
-
-    if (m_pLEDMeterIn[1])
-        m_pLEDMeterIn[1]->Process(outR);
+    m_rbLEDMeterIn[0].push(outL);
+    m_rbLEDMeterIn[1].push(outR);
 
     diffL = fabs(outL);
     diffR = fabs(outR);
@@ -395,35 +413,22 @@ void Compressor::process(const ProcessArgs &args)
         diffL -= fabs(outL);
         diffR -= fabs(outR);
 
-        if (m_pLEDMeterComp[0])
-            m_pLEDMeterComp[0]->Process(diffL);
-
-        if (m_pLEDMeterComp[1])
-            m_pLEDMeterComp[1]->Process(diffR);
-
-        if (m_pLEDMeterThreshold)
-            m_pLEDMeterThreshold->Process(m_fThreshold);
+        m_rbLEDMeterComp[0].push(diffL);
+        m_rbLEDMeterComp[1].push(diffR);
+        m_rbLEDMeterThreshold.push(m_fThreshold);
 
         outL = clamp(outL * params[PARAM_OUTGAIN].getValue(), -1.0f, 1.0f);
         outR = clamp(outR * params[PARAM_OUTGAIN].getValue(), -1.0f, 1.0f);
     }
     else
     {
-        if (m_pLEDMeterComp[0])
-            m_pLEDMeterComp[0]->Process(0);
-
-        if (m_pLEDMeterComp[1])
-            m_pLEDMeterComp[1]->Process(0);
-
-        if (m_pLEDMeterThreshold)
-            m_pLEDMeterThreshold->Process(0);
+        m_rbLEDMeterComp[0].push(0.f);
+        m_rbLEDMeterComp[1].push(0.f);
+        m_rbLEDMeterThreshold.push(0.f);
     }
 
-    if (m_pLEDMeterOut[0])
-        m_pLEDMeterOut[0]->Process(outL);
-
-    if (m_pLEDMeterOut[1])
-        m_pLEDMeterOut[1]->Process(outR);
+    m_rbLEDMeterOut[0].push(outL);
+    m_rbLEDMeterOut[1].push(outR);
 
     outputs[OUT_AUDIOL].setVoltage(outL * AUDIO_MAX);
     outputs[OUT_AUDIOR].setVoltage(outR * AUDIO_MAX);
