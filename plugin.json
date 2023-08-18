@@ -34,12 +34,11 @@
 
     {
       "slug": "SEQ_Envelope_8",
-      "name": "(Untested) ENVY - 9",
+      "name": "ENVY - 9",
       "description": "9 Channel Editable Envelope Generator",
       "tags": [
         "Sequencer"
-      ],
-      "hidden": true
+      ]
     },
 
     {

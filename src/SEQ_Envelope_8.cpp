@@ -1,6 +1,13 @@
 #include "mscHack.hpp"
 #include <array>
 
+/*
+ * Note this 2.0 port is a little 'less' pure than some others in that we retain
+ * widget items as members storing data and do a various delayed refresh action from
+ * step. See comments below.
+ */
+
+
 //-----------------------------------------------------
 // Module Definition
 //
@@ -71,6 +78,14 @@ struct SEQ_Envelope_8 : Module
     int m_waveSet = 0;
     bool m_bCpy = false;
 
+    /*
+     * OK the right thing to do is to move this envelope to the widget
+     * But that is super duper painful. It houses loads of data and state.
+     * So lets leave it here. This means this module will not run properly in
+     * a future 'headless' mode most likely.
+     *
+     * But also we still have to fix dataFromJSON properly and the Browser instance thing.
+     */
     Widget_EnvelopeEdit *m_pEnvelope = NULL;
     MyLEDButtonStrip *m_pButtonChSelect = NULL;
     MyLEDButtonStrip *m_pButtonModeSelect = NULL;
@@ -90,6 +105,9 @@ struct SEQ_Envelope_8 : Module
     MyLEDButton *m_pButtonSmooth = NULL;
 
     Label *m_pTextLabel = NULL;
+
+    std::atomic<bool> m_refreshWidgets{false};
+    void doWidgetRefresh();
 
     int m_BeatCount = 0;
 
@@ -123,8 +141,6 @@ struct SEQ_Envelope_8 : Module
     void onRandomize() override;
     void onReset() override;
 };
-
-SEQ_Envelope_8 SEQ_Envelope_8Browser;
 
 //-----------------------------------------------------
 // Seq_Triad2_Pause
@@ -377,17 +393,12 @@ struct SEQ_Envelope_8_Widget : ModuleWidget
 
     SEQ_Envelope_8_Widget(SEQ_Envelope_8 *module)
     {
-        SEQ_Envelope_8 *pmod;
+        SEQ_Envelope_8 *pmod{module};
         int ch, x = 0, y = 0;
 
         // box.size = Vec( 15*36, 380);
 
         setModule(module);
-
-        if (!module)
-            pmod = &SEQ_Envelope_8Browser;
-        else
-            pmod = module;
 
         // box.size = Vec( 15*21, 380);
         setPanel(APP->window->loadSvg(asset::plugin(thePlugin, "res/SEQ_Envelope_8.svg")));
@@ -396,6 +407,9 @@ struct SEQ_Envelope_8_Widget : ModuleWidget
         addChild(createWidget<ScrewSilver>(Vec(box.size.x - 30, 0)));
         addChild(createWidget<ScrewSilver>(Vec(15, 365)));
         addChild(createWidget<ScrewSilver>(Vec(box.size.x - 30, 365)));
+
+        if (!pmod)
+            return;
 
         // input clock
         addInput(createInput<MyPortInSmall>(Vec(45, 18), module, SEQ_Envelope_8::INPUT_CLK));
@@ -539,8 +553,22 @@ struct SEQ_Envelope_8_Widget : ModuleWidget
 
         if (module)
         {
+            module->doWidgetRefresh();
             module->m_bInitialized = true;
         }
+    }
+
+    void step() override
+    {
+        auto az = dynamic_cast<SEQ_Envelope_8 *>(module);
+        if (az)
+        {
+            if (az->m_refreshWidgets)
+            {
+                az->doWidgetRefresh();
+            }
+        }
+        Widget::step();
     }
 };
 
@@ -586,26 +614,16 @@ json_t *SEQ_Envelope_8::dataToJson()
 //-----------------------------------------------------
 void SEQ_Envelope_8::dataFromJson(json_t *root)
 {
-    int ch;
-
     JsonParams(FROMJSON, root);
 
-    for (ch = 0; ch < nCHANNELS; ch++)
+    if (m_pEnvelope)
     {
-
-        // hold button
-        m_pButtonHold[ch]->Set(m_bHold[ch]);
-
-        m_pEnvelope->setGateMode(ch, m_bGateMode[ch]);
-        m_pEnvelope->setMode(ch, m_Modes[ch]);
-        m_pEnvelope->setRange(ch, m_Ranges[ch]);
-        m_pEnvelope->setTimeDiv(ch, m_TimeDivs[ch]);
-        m_pEnvelope->setPos(ch, m_HoldPos[ch]);
+        doWidgetRefresh();
     }
-
-    m_pEnvelope->setDataAll((int *)m_GraphData);
-
-    ChangeChannel(0);
+    else
+    {
+        m_refreshWidgets = true;
+    }
 }
 
 //-----------------------------------------------------
@@ -693,6 +711,28 @@ void SEQ_Envelope_8::ChangeChannel(int ch)
     m_pButtonRangeSelect->Set(m_Ranges[ch], true);
     m_pButtonGateMode->Set(m_bGateMode[ch]);
     m_pEnvelope->setView(ch);
+}
+
+void SEQ_Envelope_8::doWidgetRefresh()
+{
+    auto az = this;
+    az->m_refreshWidgets = false;
+    for (auto ch = 0; ch < nCHANNELS; ch++)
+    {
+
+        // hold button
+        az->m_pButtonHold[ch]->Set(az->m_bHold[ch]);
+
+        az->m_pEnvelope->setGateMode(ch, az->m_bGateMode[ch]);
+        az->m_pEnvelope->setMode(ch, az->m_Modes[ch]);
+        az->m_pEnvelope->setRange(ch, az->m_Ranges[ch]);
+        az->m_pEnvelope->setTimeDiv(ch, az->m_TimeDivs[ch]);
+        az->m_pEnvelope->setPos(ch, az->m_HoldPos[ch]);
+    }
+
+    az->m_pEnvelope->setDataAll((int *)az->m_GraphData);
+
+    az->ChangeChannel(0);
 }
 
 //-----------------------------------------------------
