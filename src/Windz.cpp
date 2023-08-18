@@ -257,7 +257,6 @@ struct Windz_Widget : ModuleWidget
 
         if (module)
         {
-            module->putseed((int)random::u32());
             module->BuildDrone();
         }
     }

@@ -1,4 +1,5 @@
 #include "mscHack.hpp"
+#include <bitset>
 
 //-----------------------------------------------------
 // General Definition
@@ -126,8 +127,8 @@ struct Dronez : Module
         configParam(PARAM_SPEED, 0.0, 8.0, 4.0, "Morph speed");
     }
 
-    Label *m_pTextLabel = NULL;
-    Label *m_pTextLabel2 = NULL;
+    std::string m_sLabel1, m_sLabel2;
+    std::bitset<nCHANNELS> m_seedOn{};
 
     // oscillators
     MORPH_OSC_STRUCT m_osc[nCHANNELS] = {};
@@ -148,8 +149,6 @@ struct Dronez : Module
     // random seed
     dsp::SchmittTrigger m_SchmitTrigRand;
 
-    MyLEDButton *m_pButtonSeed[32] = {};
-    MyLEDButton *m_pButtonRand = NULL;
     int m_Seed = 0;
     int m_FadeState = FADE_IN;
     float m_fFade = 0.0f;
@@ -178,8 +177,8 @@ struct Dronez : Module
             if (!mymodule)
                 return;
 
-            sprintf(strVal, "x%.2f", mymodule->speeds[(int)paramQuantity->getValue()]);
-            mymodule->m_pTextLabel2->text = strVal;
+            snprintf(strVal, 10, "x%.2f", mymodule->speeds[(int)paramQuantity->getValue()]);
+            mymodule->m_sLabel2 = strVal;
         }
     };
 
@@ -209,8 +208,6 @@ struct Dronez : Module
     void onRandomize() override;
 };
 
-Dronez DronezBrowser;
-
 //-----------------------------------------------------
 // Dronez_SeedButton
 //-----------------------------------------------------
@@ -219,6 +216,7 @@ void Dronez_SeedButton(void *pClass, int id, bool bOn)
     Dronez *mymodule;
     mymodule = (Dronez *)pClass;
 
+    mymodule->m_seedOn[id] = bOn;
     mymodule->ChangeSeedPending(mymodule->getseed());
 }
 
@@ -240,18 +238,16 @@ void Dronez_RandButton(void *pClass, int id, bool bOn)
 
 struct Dronez_Widget : ModuleWidget
 {
+    Label *m_pTextLabel{nullptr};
+    Label *m_pTextLabel2{nullptr};
+    MyLEDButton *m_pButtonSeed[32]{};
+    MyLEDButton *m_pButtonRand{nullptr};
 
     Dronez_Widget(Dronez *module)
     {
         int i, x, y;
-        Dronez *pmod;
 
         setModule(module);
-
-        if (!module)
-            pmod = &DronezBrowser;
-        else
-            pmod = module;
 
         // box.size = Vec( 15*5, 380 );
         setPanel(APP->window->loadSvg(asset::plugin(thePlugin, "res/Dronez.svg")));
@@ -260,10 +256,10 @@ struct Dronez_Widget : ModuleWidget
         addInput(createInput<MyPortInSmall>(Vec(10, 241), module, Dronez::IN_RANDTRIG));
 
         // random button
-        pmod->m_pButtonRand =
+        m_pButtonRand =
             new MyLEDButton(40, 238, 25, 25, 20.0, DWRGB(180, 180, 180), DWRGB(255, 0, 0),
                             MyLEDButton::TYPE_MOMENTARY, 0, module, Dronez_RandButton);
-        addChild(pmod->m_pButtonRand);
+        addChild(m_pButtonRand);
 
         addOutput(createOutput<MyPortOutSmall>(Vec(48, 20), module, Dronez::OUT_L));
         addOutput(createOutput<MyPortOutSmall>(Vec(48, 45), module, Dronez::OUT_R));
@@ -275,10 +271,10 @@ struct Dronez_Widget : ModuleWidget
 
         for (i = 31; i >= 0; i--)
         {
-            pmod->m_pButtonSeed[i] =
+            m_pButtonSeed[i] =
                 new MyLEDButton(x, y, 11, 11, 8.0, DWRGB(180, 180, 180), DWRGB(255, 255, 0),
                                 MyLEDButton::TYPE_SWITCH, i, module, Dronez_SeedButton);
-            addChild(pmod->m_pButtonSeed[i]);
+            addChild(m_pButtonSeed[i]);
 
             if (i % 4 == 0)
             {
@@ -293,24 +289,40 @@ struct Dronez_Widget : ModuleWidget
 
         addParam(createParam<Dronez::MySpeed_Knob>(Vec(10, 280), module, Dronez::PARAM_SPEED));
 
-        pmod->m_pTextLabel2 = new Label();
-        pmod->m_pTextLabel2->box.pos = Vec(30, 280);
-        pmod->m_pTextLabel2->text = "x1.00";
-        addChild(pmod->m_pTextLabel2);
+        m_pTextLabel2 = new Label();
+        m_pTextLabel2->box.pos = Vec(30, 280);
+        m_pTextLabel2->text = "x1.00";
+        addChild(m_pTextLabel2);
 
-        pmod->m_pTextLabel = new Label();
-        pmod->m_pTextLabel->box.pos = Vec(0, 213);
-        pmod->m_pTextLabel->text = "----";
-        addChild(pmod->m_pTextLabel);
+        m_pTextLabel = new Label();
+        m_pTextLabel->box.pos = Vec(0, 213);
+        m_pTextLabel->text = "----";
+        addChild(m_pTextLabel);
 
         addChild(createWidget<ScrewSilver>(Vec(30, 0)));
         addChild(createWidget<ScrewSilver>(Vec(30, 365)));
 
         if (module)
         {
-            module->putseed((int)random::u32());
             module->BuildDrone();
         }
+    }
+
+    void step() override
+    {
+        auto az = dynamic_cast<Dronez *>(module);
+        if (az)
+        {
+            if (m_pTextLabel->text != az->m_sLabel1)
+                m_pTextLabel->text = az->m_sLabel1;
+            if (m_pTextLabel2->text != az->m_sLabel2)
+                m_pTextLabel2->text = az->m_sLabel2;
+            for (int i = 0; i < 32; i++)
+            {
+                m_pButtonSeed[i]->Set(az->m_seedOn[i]);
+            }
+        }
+        Widget::step();
     }
 };
 
@@ -342,14 +354,9 @@ json_t *Dronez::dataToJson()
 //-----------------------------------------------------
 void Dronez::dataFromJson(json_t *root)
 {
-    // char strVal[ 10 ] = {};
-
     JsonParams(FROMJSON, root);
 
     ChangeSeedPending(m_Seed);
-
-    // sprintf( strVal, "x%.2f", speeds[ (int)params[ PARAM_SPEED ].value ] );
-    // m_pTextLabel2->text = strVal;
 }
 
 //-----------------------------------------------------
@@ -369,7 +376,7 @@ int Dronez::getseed(void)
 
     for (int i = 0; i < 32; i++)
     {
-        if (m_pButtonSeed[i]->m_bOn)
+        if (m_seedOn[i])
             seed |= shift;
 
         shift <<= 1;
@@ -391,7 +398,7 @@ void Dronez::putseed(int seed)
 
     for (int i = 0; i < 32; i++)
     {
-        m_pButtonSeed[i]->Set((bool)(seed & 1));
+        m_seedOn[i] = (bool)(seed & 1);
         seed >>= 1;
     }
 }
@@ -544,8 +551,8 @@ void Dronez::putf(float fval)
 {
     char strVal[10] = {};
 
-    sprintf(strVal, "%.3f", fval);
-    m_pTextLabel->text = strVal;
+    snprintf(strVal, 10, "%.3f", fval);
+    m_sLabel1 = strVal;
 }
 
 //-----------------------------------------------------
@@ -556,8 +563,8 @@ void Dronez::putx(int x)
 {
     char strVal[10] = {};
 
-    sprintf(strVal, "%.8X", x);
-    m_pTextLabel->text = strVal;
+    snprintf(strVal, 10, "%.8X", x);
+    m_sLabel1 = strVal;
 }
 
 //-----------------------------------------------------
@@ -686,7 +693,6 @@ void Dronez::process(const ProcessArgs &args)
     // randomize trigger
     if (m_SchmitTrigRand.process(inputs[IN_RANDTRIG].getNormalVoltage(0.0f)))
     {
-        m_pButtonRand->Set(true);
         ChangeSeedPending((int)random::u32());
     }
 

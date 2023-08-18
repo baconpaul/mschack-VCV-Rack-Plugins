@@ -152,12 +152,11 @@
 
     {
       "slug": "Dronez",
-      "name": "(Untested) Dronez",
+      "name": "Dronez",
       "description": "Random Drone",
       "tags": [
         "Oscillator"
-      ],
-      "hidden": true
+      ]
     },
     {
       "slug": "Alienz",

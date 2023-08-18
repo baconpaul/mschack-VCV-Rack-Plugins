@@ -53,7 +53,6 @@ struct Compressor : Module
 
     bool m_bInitialized = false;
 
-
     bool m_bBypass = false;
 
     COMP_STATE m_CompL = {};
@@ -75,7 +74,7 @@ struct Compressor : Module
         configParam(PARAM_SIDE_CHAIN, 0.0f, 1.0f, 0.0f, "Fade In Speed");
     }
 
-    typedef rack::dsp::RingBuffer<float, 8192*4> rbuf_t;
+    typedef rack::dsp::RingBuffer<float, 8192 * 4> rbuf_t;
     rbuf_t m_rbLEDMeterIn[2], m_rbLEDMeterComp[2], m_rbLEDMeterThreshold, m_rbLEDMeterOut[2];
 
     // Overrides
@@ -104,10 +103,10 @@ void Compressor_Bypass(void *pClass, int id, bool bOn)
 
 struct Compressor_Widget : ModuleWidget
 {
-    LEDMeterWidget *m_pLEDMeterIn[2]{0,0};
+    LEDMeterWidget *m_pLEDMeterIn[2]{0, 0};
     CompressorLEDMeterWidget *m_pLEDMeterThreshold{nullptr};
-    CompressorLEDMeterWidget *m_pLEDMeterComp[2]{0,0};
-    LEDMeterWidget *m_pLEDMeterOut[2]{0,0};
+    CompressorLEDMeterWidget *m_pLEDMeterComp[2]{0, 0};
+    LEDMeterWidget *m_pLEDMeterOut[2]{0, 0};
     MyLEDButton *m_pButtonBypass{nullptr};
 
     Compressor_Widget(Compressor *module)
@@ -129,9 +128,8 @@ struct Compressor_Widget : ModuleWidget
         addChild(createWidget<ScrewSilver>(Vec(box.size.x - 30, 365)));
 
         // bypass switch
-        m_pButtonBypass =
-            new MyLEDButton(x, y, 11, 11, 8.0, DWRGB(180, 180, 180), DWRGB(255, 0, 0),
-                            MyLEDButton::TYPE_SWITCH, 0, module, Compressor_Bypass);
+        m_pButtonBypass = new MyLEDButton(x, y, 11, 11, 8.0, DWRGB(180, 180, 180), DWRGB(255, 0, 0),
+                                          MyLEDButton::TYPE_SWITCH, 0, module, Compressor_Bypass);
         addChild(m_pButtonBypass);
 
         // audio inputs
@@ -146,15 +144,15 @@ struct Compressor_Widget : ModuleWidget
         m_pLEDMeterIn[1] = new LEDMeterWidget(x + 28, y + 25, 5, 3, 2, true);
         addChild(m_pLEDMeterIn[1]);
 
-        m_pLEDMeterThreshold = new CompressorLEDMeterWidget(
-            true, x + 39, y + 25, 5, 3, DWRGB(245, 10, 174), DWRGB(96, 4, 68));
+        m_pLEDMeterThreshold = new CompressorLEDMeterWidget(true, x + 39, y + 25, 5, 3,
+                                                            DWRGB(245, 10, 174), DWRGB(96, 4, 68));
         addChild(m_pLEDMeterThreshold);
 
-        m_pLEDMeterComp[0] = new CompressorLEDMeterWidget(
-            true, x + 48, y + 25, 5, 3, DWRGB(0, 128, 255), DWRGB(0, 64, 128));
+        m_pLEDMeterComp[0] = new CompressorLEDMeterWidget(true, x + 48, y + 25, 5, 3,
+                                                          DWRGB(0, 128, 255), DWRGB(0, 64, 128));
         addChild(m_pLEDMeterComp[0]);
-        m_pLEDMeterComp[1] = new CompressorLEDMeterWidget(
-            true, x + 55, y + 25, 5, 3, DWRGB(0, 128, 255), DWRGB(0, 64, 128));
+        m_pLEDMeterComp[1] = new CompressorLEDMeterWidget(true, x + 55, y + 25, 5, 3,
+                                                          DWRGB(0, 128, 255), DWRGB(0, 64, 128));
         addChild(m_pLEDMeterComp[1]);
 
         m_pLEDMeterOut[0] = new LEDMeterWidget(x + 65, y + 25, 5, 3, 2, true);
@@ -189,14 +187,12 @@ struct Compressor_Widget : ModuleWidget
             module->m_bInitialized = true;
     }
 
-
     void step() override
     {
         auto az = dynamic_cast<Compressor *>(module);
         if (az)
         {
-            auto apply = [](auto &rb, auto *wid)
-            {
+            auto apply = [](auto &rb, auto *wid) {
                 while (!rb.empty())
                 {
                     auto f = rb.shift();
