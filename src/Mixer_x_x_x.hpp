@@ -1,4 +1,5 @@
 #include "mscHack.hpp"
+#include <array>
 
 #define nAUX 4
 #define nEQ 3
@@ -75,13 +76,25 @@ struct Mixer_ : Module
         nLIGHTS
     };
 
-    bool m_bInitialized = false;
     float m_StartupFade = 0.0f;
     int m_StartCount = START_DELAY_COUNT;
 
     // Contructor
     Mixer_()
     {
+        float fx, fx2, fx3, fx5, fx7;
+
+        // calculate eq rez freq
+        fx = 3.141592 * (CUTOFF * 0.026315789473684210526315789473684) * 2 * 3.141592;
+        fx2 = fx * fx;
+        fx3 = fx2 * fx;
+        fx5 = fx3 * fx2;
+        fx7 = fx5 * fx2;
+
+        m_Freq = 2.0 * (fx - (fx3 * 0.16666666666666666666666666666667) +
+                        (fx5 * 0.0083333333333333333333333333333333) -
+                        (fx7 * 0.0001984126984126984126984126984127));
+
         int pos;
         char strVal[30] = {};
         char strType[30] = {};
@@ -94,47 +107,47 @@ struct Mixer_ : Module
         {
             if (i < nINCHANNELS)
             {
-                sprintf(strType, "Ch");
+                snprintf(strType, 30, "Ch");
                 pos = i + 1;
             }
             else if (nGROUPS && i < (nINCHANNELS + nGROUPS))
             {
-                sprintf(strType, "Gr");
+                snprintf(strType, 30, "Gr");
                 pos = i - nINCHANNELS + 1;
             }
             else
             {
-                sprintf(strType, "AUX");
+                snprintf(strType, 30, "AUX");
                 pos = i - (nINCHANNELS + nGROUPS) + 1;
             }
 
-            sprintf(strVal, "%s%d. Level", strType, pos);
+            snprintf(strVal, 30, "%s%d. Level", strType, pos);
             configParam(PARAM_CHLVL + i, 0.0, 1.0, 0.0, strVal);
 
-            sprintf(strVal, "%s%d. Pan", strType, pos);
+            snprintf(strVal, 30, "%s%d. Pan", strType, pos);
             configParam(PARAM_CHPAN + i, -1.0, 1.0, 0.0, strVal);
 
-            sprintf(strVal, "%s%d. EQ High", strType, pos);
+            snprintf(strVal, 30, "%s%d. EQ High", strType, pos);
             configParam(PARAM_CHEQHI + i, 0.0, 1.0, 0.5, strVal);
 
-            sprintf(strVal, "%s%d. EQ Mid", strType, pos);
+            snprintf(strVal, 30, "%s%d. EQ Mid", strType, pos);
             configParam(PARAM_CHEQMD + i, 0.0, 1.0, 0.5, strVal);
 
-            sprintf(strVal, "%s%d. EQ Low", strType, pos);
+            snprintf(strVal, 30, "%s%d. EQ Low", strType, pos);
             configParam(PARAM_CHEQLO + i, 0.0, 1.0, 0.5, strVal);
 
             if (i < (nINCHANNELS + nGROUPS))
             {
-                sprintf(strVal, "%s%d. AUX 1 Level", strType, pos);
+                snprintf(strVal, 30, "%s%d. AUX 1 Level", strType, pos);
                 configParam(PARAM_CHAUX + (i * 4) + 0, 0.0, 1.0, 0.0, strVal);
 
-                sprintf(strVal, "%s%d. AUX 2 Level", strType, pos);
+                snprintf(strVal, 30, "%s%d. AUX 2 Level", strType, pos);
                 configParam(PARAM_CHAUX + (i * 4) + 1, 0.0, 1.0, 0.0, strVal);
 
-                sprintf(strVal, "%s%d. AUX 3 Level", strType, pos);
+                snprintf(strVal, 30, "%s%d. AUX 3 Level", strType, pos);
                 configParam(PARAM_CHAUX + (i * 4) + 2, 0.0, 1.0, 0.0, strVal);
 
-                sprintf(strVal, "%s%d. AUX 4 Level", strType, pos);
+                snprintf(strVal, 30, "%s%d. AUX 4 Level", strType, pos);
                 configParam(PARAM_CHAUX + (i * 4) + 3, 0.0, 1.0, 0.0, strVal);
             }
         }
@@ -143,6 +156,8 @@ struct Mixer_ : Module
         configParam(PARAM_AUXLVL + 1, 0.0, 1.0, 0.0, "AUX2 Send Level");
         configParam(PARAM_AUXLVL + 2, 0.0, 1.0, 0.0, "AUX3 Send Level");
         configParam(PARAM_AUXLVL + 3, 0.0, 1.0, 0.0, "AUX4 Send Level");
+
+        onReset();
     }
 
     // mute/solo
@@ -155,9 +170,9 @@ struct Mixer_ : Module
     // processing
     bool m_bMono[nCHANNELS];
 
-    // LED Meters
-    LEDMeterWidget *m_pLEDMeterChannel[nCHANNELS][2] = {};
-    LEDMeterWidget *m_pLEDMeterMain[2] = {};
+    // LED Meter ring buffers
+    typedef rack::dsp::RingBuffer<float, 8192 * 4> rbuf_t;
+    rbuf_t m_rbLEDMeterChannel[nCHANNELS][2], m_rbLEDMeterMain[2];
 
     // EQ Rez
     float lp1[nCHANNELS][2] = {}, bp1[nCHANNELS][2] = {};
@@ -167,15 +182,18 @@ struct Mixer_ : Module
     float m_Freq;
 
     // buttons
+    std::array<std::atomic<bool>, nCHANNELS> m_bResetChannelControls{};
+    /*
     MyLEDButton *m_pButtonChannelMute[nCHANNELS] = {};
     MyLEDButton *m_pButtonChannelSolo[nCHANNELS - nAUX] = {};
     MyLEDButton *m_pButtonPreFader[nCHANNELS] = {};
+     */
 
     // routing
 
 #if nGROUPS > 0
     int m_iRouteGroup[nINCHANNELS] = {nGROUPS};
-    MyLEDButtonStrip *m_pMultiButtonRoute[nINCHANNELS] = {0};
+    // MyLEDButtonStrip *m_pMultiButtonRoute[nINCHANNELS] = {0};
 #endif
 
     // menu
@@ -369,21 +387,25 @@ struct _AuxIgnoreSolo : MenuItem
 //-----------------------------------------------------
 struct Mixer_Widget_ : ModuleWidget
 {
+    LEDMeterWidget *m_pLEDMeterChannel[nCHANNELS][2] = {};
+    LEDMeterWidget *m_pLEDMeterMain[2] = {};
+
+    MyLEDButton *m_pButtonChannelMute[nCHANNELS] = {};
+    MyLEDButton *m_pButtonChannelSolo[nCHANNELS - nAUX] = {};
+    MyLEDButton *m_pButtonPreFader[nCHANNELS] = {};
+
+#if nGROUPS > 0
+    MyLEDButtonStrip *m_pMultiButtonRoute[nINCHANNELS] = {0};
+#endif
 
     Mixer_Widget_(Mixer_ *module)
     {
         // Mixer_ *pmod;
         PortWidget *pPort;
-        float fx, fx2, fx3, fx5, fx7;
         int ch, x, y, x2, y2;
         bool bGroup, bAux, bNormal;
 
         setModule(module);
-
-        /*if( !module )
-            pmod = &_BrowserClass;
-        else
-            pmod = module;*/
 
         setPanel(APP->window->loadSvg(asset::plugin(thePlugin, Mixer_Svg)));
 
@@ -439,13 +461,10 @@ struct Mixer_Widget_ : ModuleWidget
                 addParam(createParam<Knob_Purp1_15>(Vec(x2, y2), module,
                                                     Mixer_::PARAM_CHAUX + (ch * 4) + 3));
 
-                if (module)
-                {
-                    module->m_pButtonPreFader[ch] = new MyLEDButton(
-                        x2 - 3, y2 + 15, 7, 7, 5.0f, DWRGB(180, 180, 180), DWRGB(255, 255, 255),
-                        MyLEDButton::TYPE_SWITCH, ch, module, _Button_ChPreFader);
-                    addChild(module->m_pButtonPreFader[ch]);
-                }
+                m_pButtonPreFader[ch] = new MyLEDButton(
+                    x2 - 3, y2 + 15, 7, 7, 5.0f, DWRGB(180, 180, 180), DWRGB(255, 255, 255),
+                    MyLEDButton::TYPE_SWITCH, ch, module, _Button_ChPreFader);
+                addChild(m_pButtonPreFader[ch]);
 
                 y2 += 24;
             }
@@ -519,54 +538,46 @@ struct Mixer_Widget_ : ModuleWidget
 
             y2 += 19;
 
-            if (module)
+            // mute/solo
+            if (bNormal || bGroup)
             {
-                // mute/solo
-                if (bNormal || bGroup)
-                {
-                    module->m_pButtonChannelMute[ch] = new MyLEDButton(
-                        x + 3, y2, 8, 8, 6.0f, DWRGB(180, 180, 180), DWRGB(255, 0, 0),
-                        MyLEDButton::TYPE_SWITCH, ch, module, _Button_ChMute);
-                    addChild(module->m_pButtonChannelMute[ch]);
+                m_pButtonChannelMute[ch] =
+                    new MyLEDButton(x + 3, y2, 8, 8, 6.0f, DWRGB(180, 180, 180), DWRGB(255, 0, 0),
+                                    MyLEDButton::TYPE_SWITCH, ch, module, _Button_ChMute);
+                addChild(m_pButtonChannelMute[ch]);
 
-                    module->m_pButtonChannelSolo[ch] = new MyLEDButton(
-                        x + 12, y2, 8, 8, 6.0f, DWRGB(180, 180, 180), DWRGB(0, 255, 0),
-                        MyLEDButton::TYPE_SWITCH, ch, module, _Button_ChSolo);
-                    addChild(module->m_pButtonChannelSolo[ch]);
-                }
-                // mute only
-                else
-                {
-                    module->m_pButtonChannelMute[ch] = new MyLEDButton(
-                        x + 9, y2, 8, 8, 6.0f, DWRGB(180, 180, 180), DWRGB(255, 0, 0),
-                        MyLEDButton::TYPE_SWITCH, ch, module, _Button_ChMute);
-                    addChild(module->m_pButtonChannelMute[ch]);
-                }
+                m_pButtonChannelSolo[ch] =
+                    new MyLEDButton(x + 12, y2, 8, 8, 6.0f, DWRGB(180, 180, 180), DWRGB(0, 255, 0),
+                                    MyLEDButton::TYPE_SWITCH, ch, module, _Button_ChSolo);
+                addChild(m_pButtonChannelSolo[ch]);
+            }
+            // mute only
+            else
+            {
+                m_pButtonChannelMute[ch] =
+                    new MyLEDButton(x + 9, y2, 8, 8, 6.0f, DWRGB(180, 180, 180), DWRGB(255, 0, 0),
+                                    MyLEDButton::TYPE_SWITCH, ch, module, _Button_ChMute);
+                addChild(m_pButtonChannelMute[ch]);
             }
 
-            if (module)
-            {
-                // VUMeter
-                module->m_pLEDMeterChannel[ch][0] =
-                    new LEDMeterWidget(x + 7, y + 260, 4, 1, 1, true);
-                addChild(module->m_pLEDMeterChannel[ch][0]);
-                module->m_pLEDMeterChannel[ch][1] =
-                    new LEDMeterWidget(x + 12, y + 260, 4, 1, 1, true);
-                addChild(module->m_pLEDMeterChannel[ch][1]);
-            }
+            // VUMeter
+            m_pLEDMeterChannel[ch][0] = new LEDMeterWidget(x + 7, y + 260, 4, 1, 1, true);
+            addChild(m_pLEDMeterChannel[ch][0]);
+            m_pLEDMeterChannel[ch][1] = new LEDMeterWidget(x + 12, y + 260, 4, 1, 1, true);
+            addChild(m_pLEDMeterChannel[ch][1]);
 
             x2 = x + 2;
             y2 = y + 290;
 
 #if nGROUPS > 0
             // Group Route
-            if (module && bNormal)
+            if (bNormal)
             {
-                module->m_pMultiButtonRoute[ch] = new MyLEDButtonStrip(
+                m_pMultiButtonRoute[ch] = new MyLEDButtonStrip(
                     x2, y2, 6, 6, 3, 4.0f, nGROUPS + 1, true, DWRGB(0, 128, 128),
                     DWRGB(0, 255, 255), MyLEDButtonStrip::TYPE_EXCLUSIVE, ch, module,
                     _RouteCallback);
-                addChild(module->m_pMultiButtonRoute[ch]);
+                addChild(m_pMultiButtonRoute[ch]);
             }
 #endif
 
@@ -582,13 +593,10 @@ struct Mixer_Widget_ : ModuleWidget
         // output
         addParam(createParam<Knob_Blue2_56>(Vec(x, 256), module, Mixer_::PARAM_LEVEL_OUT));
 
-        if (module)
-        {
-            module->m_pLEDMeterMain[0] = new LEDMeterWidget(x + 10, 315, 5, 3, 2, true);
-            addChild(module->m_pLEDMeterMain[0]);
-            module->m_pLEDMeterMain[1] = new LEDMeterWidget(x + 10 + 7, 315, 5, 3, 2, true);
-            addChild(module->m_pLEDMeterMain[1]);
-        }
+        m_pLEDMeterMain[0] = new LEDMeterWidget(x + 10, 315, 5, 3, 2, true);
+        addChild(m_pLEDMeterMain[0]);
+        m_pLEDMeterMain[1] = new LEDMeterWidget(x + 10 + 7, 315, 5, 3, 2, true);
+        addChild(m_pLEDMeterMain[1]);
 
         // main outputs
         addOutput(createOutput<MyPortOutSmall>(Vec(x + 33, 319), module, Mixer_::OUT_MAINL));
@@ -605,23 +613,55 @@ struct Mixer_Widget_ : ModuleWidget
         addChild(createWidget<ScrewSilver>(Vec(box.size.x - 30, 0)));
         addChild(createWidget<ScrewSilver>(Vec(15, 365)));
         addChild(createWidget<ScrewSilver>(Vec(box.size.x - 30, 365)));
+    }
 
-        if (module)
+    void step() override
+    {
+        auto az = dynamic_cast<Mixer_ *>(module);
+        if (az)
         {
-            // calculate eq rez freq
-            fx = 3.141592 * (CUTOFF * 0.026315789473684210526315789473684) * 2 * 3.141592;
-            fx2 = fx * fx;
-            fx3 = fx2 * fx;
-            fx5 = fx3 * fx2;
-            fx7 = fx5 * fx2;
+            auto apply = [](auto &rb, auto *wid) {
+                while (!rb.empty())
+                {
+                    auto f = rb.shift();
+                    wid->Process(f);
+                }
+            };
 
-            module->m_Freq = 2.0 * (fx - (fx3 * 0.16666666666666666666666666666667) +
-                                    (fx5 * 0.0083333333333333333333333333333333) -
-                                    (fx7 * 0.0001984126984126984126984126984127));
+            for (int c = 0; c < 2; ++c)
+            {
+                for (int i = 0; i < nCHANNELS; ++i)
+                {
+                    apply(az->m_rbLEDMeterChannel[i][c], m_pLEDMeterChannel[i][c]);
+                }
+                apply(az->m_rbLEDMeterMain[c], m_pLEDMeterMain[c]);
+            }
 
-            module->m_bInitialized = true;
-            module->onReset();
+            for (int ch = 0; ch < nCHANNELS; ++ch)
+            {
+                if (!az->m_bResetChannelControls[ch])
+                    continue;
+                az->m_bResetChannelControls[ch] = false;
+
+                m_pButtonChannelMute[ch]->Set(az->m_bMuteStates[ch]);
+
+                if (ch < (nINCHANNELS + nGROUPS))
+                {
+                    m_pButtonChannelSolo[ch]->Set(az->m_bSoloStates[ch]);
+                }
+
+#if nGROUPS > 0
+                if (ch < nINCHANNELS && m_pMultiButtonRoute[ch])
+                    m_pMultiButtonRoute[ch]->Set(az->m_iRouteGroup[ch], true);
+#endif
+
+                if (ch < (nINCHANNELS + nGROUPS))
+                    m_pButtonPreFader[ch]->Set(az->m_bPreFader[ch]);
+
+                m_pButtonChannelSolo[ch]->Set(az->m_bSoloStates[ch]);
+            }
         }
+        Widget::step();
     }
 
     //-----------------------------------------------------
@@ -702,9 +742,6 @@ void Mixer_::dataFromJson(json_t *root)
 
     JsonParams(FROMJSON, root);
 
-    if (!m_bInitialized)
-        return;
-
     // anybody soloing?
     for (ch = 0; ch < nCHANNELS; ch++)
     {
@@ -723,25 +760,10 @@ void Mixer_::dataFromJson(json_t *root)
 //-----------------------------------------------------
 void Mixer_::SetControls(int ch)
 {
-    if (!m_bInitialized || ch >= nCHANNELS || ch < 0)
+    if (ch >= nCHANNELS || ch < 0)
         return;
 
-    if (m_pButtonChannelMute[ch])
-        m_pButtonChannelMute[ch]->Set(m_bMuteStates[ch]);
-
-    if (ch < (nINCHANNELS + nGROUPS))
-    {
-        if (m_pButtonChannelSolo[ch])
-            m_pButtonChannelSolo[ch]->Set(m_bSoloStates[ch]);
-    }
-
-#if nGROUPS > 0
-    if (ch < nINCHANNELS && m_pMultiButtonRoute[ch])
-        m_pMultiButtonRoute[ch]->Set(m_iRouteGroup[ch], true);
-#endif
-
-    if (ch < (nINCHANNELS + nGROUPS))
-        m_pButtonPreFader[ch]->Set(m_bPreFader[ch]);
+    m_bResetChannelControls[ch] = true;
 }
 
 //-----------------------------------------------------
@@ -751,9 +773,6 @@ void Mixer_::SetControls(int ch)
 void Mixer_::onReset()
 {
     int ch;
-
-    if (!m_bInitialized)
-        return;
 
     m_StartupFade = 0.0f;
     m_StartCount = START_DELAY_COUNT;
@@ -847,19 +866,19 @@ void Mixer_::ProcessMuteSolo(int index, bool bMute, bool bOn)
         if (m_bSoloStates[index])
         {
             m_bSoloStates[index] = false;
-            m_pButtonChannelSolo[index]->Set(false);
+            m_bResetChannelControls[index] = true;
         }
 
         // if mute is off then set volume
         if (m_bMuteStates[index])
         {
-            m_pButtonChannelMute[index]->Set(true);
             m_FadeState[index] = MUTE_FADE_STATE_DEC;
+            m_bResetChannelControls[index] = true;
         }
         else
         {
-            m_pButtonChannelMute[index]->Set(false);
             m_FadeState[index] = MUTE_FADE_STATE_INC;
+            m_bResetChannelControls[index] = true;
         }
     }
     else
@@ -870,17 +889,17 @@ void Mixer_::ProcessMuteSolo(int index, bool bMute, bool bOn)
         if (m_bMuteStates[index])
         {
             m_bMuteStates[index] = false;
-            m_pButtonChannelMute[index]->Set(false);
+            m_bResetChannelControls[index] = true;
         }
 
         // toggle solo
         if (!m_bSoloStates[index])
         {
-            m_pButtonChannelSolo[index]->Set(false);
+            m_bResetChannelControls[index] = true;
         }
         else
         {
-            m_pButtonChannelSolo[index]->Set(true);
+            m_bResetChannelControls[index] = true;
         }
     }
 
@@ -989,9 +1008,6 @@ void Mixer_::process(const ProcessArgs &args)
     float auxL[nAUX] = {}, auxR[nAUX] = {};
     bool bChannelActive, bGroupActive[MAX_GROUPS] = {false};
     float pan, levelmult = 1.0;
-
-    if (!m_bInitialized)
-        return;
 
     if (m_StartCount)
     {
@@ -1237,20 +1253,16 @@ void Mixer_::process(const ProcessArgs &args)
             }
         }
 
-        if (m_pLEDMeterChannel[ch][0])
-            m_pLEDMeterChannel[ch][0]->Process(inL / AUDIO_MAX);
-        if (m_pLEDMeterChannel[ch][1])
-            m_pLEDMeterChannel[ch][1]->Process(inR / AUDIO_MAX);
+        m_rbLEDMeterChannel[ch][0].push(inL / AUDIO_MAX);
+        m_rbLEDMeterChannel[ch][1].push(inR / AUDIO_MAX);
     }
 
     fMixOutL = fMixOutL * params[PARAM_LEVEL_OUT].getValue();
     fMixOutR = fMixOutR * params[PARAM_LEVEL_OUT].getValue();
 
     // update main VUMeters
-    if (m_pLEDMeterMain[0])
-        m_pLEDMeterMain[0]->Process(fMixOutL / AUDIO_MAX);
-    if (m_pLEDMeterMain[1])
-        m_pLEDMeterMain[1]->Process(fMixOutR / AUDIO_MAX);
+    m_rbLEDMeterMain[0].push(fMixOutL / AUDIO_MAX);
+    m_rbLEDMeterMain[1].push(fMixOutR / AUDIO_MAX);
 
     // put aux output
     for (aux = 0; aux < nAUX; aux++)

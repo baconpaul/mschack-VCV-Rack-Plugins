@@ -101,42 +101,38 @@
 
     {
       "slug": "Mix_4_0_4",
-      "name": "(Untested) MIX 4 Channel",
+      "name": "MIX 4 Channel",
       "description": "4 Channel Mixer",
       "tags": [
         "Mixer"
-      ],
-      "hidden": true
+      ]
     },
 
     {
       "slug": "Mix_9_3_4",
-      "name": "(Untested) MIX 9 Channel, 3 Groups",
+      "name": "MIX 9 Channel, 3 Groups",
       "description": "9 Channel Mixer",
       "tags": [
         "Mixer"
-      ],
-      "hidden": true
+      ]
     },
 
     {
       "slug": "Mix_16_4_4",
-      "name": "(Untested) MIX 16 Channel, 4 groups",
+      "name": "MIX 16 Channel, 4 groups",
       "description": "16 Channel Mixer",
       "tags": [
         "Mixer"
-      ],
-      "hidden": true
+      ]
     },
 
     {
       "slug": "Mix_24_4_4",
-      "name": "(Untested) MIX 24 Channel, 4 groups",
+      "name": "MIX 24 Channel, 4 groups",
       "description": "24 Channel Mixer",
       "tags": [
         "Mixer"
-      ],
-      "hidden": true
+      ]
     },
 
     {
