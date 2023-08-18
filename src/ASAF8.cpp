@@ -115,9 +115,6 @@ struct ASAF8 : Module
     void onReset() override;
 };
 
-// dumb
-ASAF8 g_ASAF8_Browser;
-
 //-----------------------------------------------------
 // ASAF8_TrigButton
 //-----------------------------------------------------

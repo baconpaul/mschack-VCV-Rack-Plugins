@@ -49,6 +49,9 @@ struct MasterClockx4 : Module
     MyLEDButton *m_pButtonTrig[nCHANNELS] = {};
     MyLEDButton *m_pButtonTimeX2[nCHANNELS] = {};
 
+    std::atomic<bool> m_refreshWidgets{false};
+    void doWidgetRefresh();
+
     bool m_bGlobalSync = false;
     bool m_bStopState[nCHANNELS] = {};
     bool m_bGlobalStopState = false;
@@ -176,8 +179,6 @@ struct MasterClockx4 : Module
     void SetDisplayLED(int ch, int val);
 };
 
-MasterClockx4 MasterClockx4Browser;
-
 //-----------------------------------------------------
 // MyLEDButton_GlobalStop
 //-----------------------------------------------------
@@ -243,15 +244,10 @@ struct MasterClockx4_Widget : ModuleWidget
     MasterClockx4_Widget(MasterClockx4 *module)
     {
         int ch, x, y;
-        MasterClockx4 *pmod;
+        MasterClockx4 *pmod{module};
 
         // box.size = Vec( 15*18, 380);
         setModule(module);
-
-        if (!module)
-            pmod = &MasterClockx4Browser;
-        else
-            pmod = module;
 
         setPanel(APP->window->loadSvg(asset::plugin(thePlugin, "res/MasterClockx4.svg")));
 
@@ -259,6 +255,9 @@ struct MasterClockx4_Widget : ModuleWidget
         addChild(createWidget<ScrewSilver>(Vec(box.size.x - 30, 0)));
         addChild(createWidget<ScrewSilver>(Vec(15, 365)));
         addChild(createWidget<ScrewSilver>(Vec(box.size.x - 30, 365)));
+
+        if (!pmod)
+            return;
 
         // bpm knob
         pmod->m_pBpmKnob =
@@ -353,8 +352,21 @@ struct MasterClockx4_Widget : ModuleWidget
         if (module)
         {
             module->m_bInitialized = true;
-            module->onReset();
+            module->doWidgetRefresh();
         }
+    }
+
+    void step() override
+    {
+        auto az = dynamic_cast<MasterClockx4 *>(module);
+        if (az)
+        {
+            if (az->m_refreshWidgets)
+            {
+                az->doWidgetRefresh();
+            }
+        }
+        Widget::step();
     }
 };
 
@@ -395,9 +407,19 @@ void MasterClockx4::dataFromJson(json_t *root)
 {
     JsonParams(FROMJSON, root);
 
-    if (!m_bInitialized)
-        return;
+    if (m_pButtonGlobalStop)
+    {
+        doWidgetRefresh();
+    }
+    else
+    {
+        m_refreshWidgets = true;
+    }
+}
 
+void MasterClockx4::doWidgetRefresh()
+{
+    m_refreshWidgets = false;
     m_pButtonGlobalStop->Set(m_bGlobalStopState);
 
     for (int ch = 0; ch < nCHANNELS; ch++)

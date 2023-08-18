@@ -135,8 +135,6 @@ struct Lorenz : Module
     float ProcessCV(int param, int lfocv, int amtparam, bool bLinearParam);
 };
 
-Lorenz LorenzBrowser;
-
 //-----------------------------------------------------
 // Lorenz_FilterSelect
 //-----------------------------------------------------
