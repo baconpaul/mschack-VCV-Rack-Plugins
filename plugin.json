@@ -137,12 +137,11 @@
 
     {
       "slug": "ASAF8",
-      "name": "(Untested) ASAF8",
+      "name": "ASAF8",
       "description": "8 Channel Auto Stereo Audio Fader",
       "tags": [
         "Mixer"
-      ],
-      "hidden": true
+      ]
     },
 
     {

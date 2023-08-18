@@ -1,4 +1,5 @@
 #include "mscHack.hpp"
+#include <array>
 
 #define nCHANNELS 8
 #define nENVELOPE_SEGS 5
@@ -49,23 +50,27 @@ struct ASAF8 : Module
         STATE_FOUT
     };
 
-    bool m_bInitialized = false;
-
     // triggers
-    MyLEDButton *m_pTrigButton[nCHANNELS] = {};
 
     int m_State[nCHANNELS] = {STATE_OFF};
+    bool m_Triggered[nCHANNELS]{};
 
     float m_fFade[nCHANNELS] = {};
     float m_fPos[nCHANNELS] = {};
 
     ENV_SEG m_EnvSeg[nENVELOPE_SEGS] = {};
 
-    Label *m_pTextLabel = NULL;
+    std::string m_sLabel;
 
     // Contructor
     ASAF8()
     {
+        envSeg_from_points(0.0f, 1.0f, 0.2f, 0.975f, &m_EnvSeg[0]);
+        envSeg_from_points(0.2f, 0.975f, 0.3f, 0.9f, &m_EnvSeg[1]);
+        envSeg_from_points(0.3f, 0.9f, 0.7f, 0.1f, &m_EnvSeg[2]);
+        envSeg_from_points(0.7f, 0.1f, 0.8f, 0.075f, &m_EnvSeg[3]);
+        envSeg_from_points(0.8f, 0.075f, 1.0f, 0.0f, &m_EnvSeg[4]);
+
         config(nPARAMS, nINPUTS, nOUTPUTS, nLIGHTS);
 
         for (int i = 0; i < nCHANNELS; i++)
@@ -89,9 +94,9 @@ struct ASAF8 : Module
             ParamQuantity *paramQuantity = getParamQuantity();
             mymodule = (ASAF8 *)paramQuantity->module;
 
-            sprintf(strVal, "[%.2fs]", paramQuantity->getValue());
+            snprintf(strVal, 10, "[%.2fs]", paramQuantity->getValue());
 
-            mymodule->m_pTextLabel->text = strVal;
+            mymodule->m_sLabel = strVal;
 
             RoundKnob::onChange(e);
         }
@@ -122,11 +127,9 @@ void ASAF8_TrigButton(void *pClass, int id, bool bOn)
     mymodule = (ASAF8 *)pClass;
 
     if (bOn)
-        mymodule->m_pTrigButton[id]->Set(true);
-    // mymodule->m_State[ id ] = ASAF8::STATE_FIN;
+        mymodule->m_Triggered[id] = true;
     else
-        mymodule->m_pTrigButton[id]->Set(false);
-    // mymodule->m_State[ id ] = ASAF8::STATE_FOUT;
+        mymodule->m_Triggered[id] = false;
 }
 
 //-----------------------------------------------------
@@ -135,27 +138,21 @@ void ASAF8_TrigButton(void *pClass, int id, bool bOn)
 //-----------------------------------------------------
 struct ASAF8_Widget : ModuleWidget
 {
-
+    MyLEDButton *m_pTrigButton[nCHANNELS]{};
+    Label *m_pTextLabel = NULL;
     ASAF8_Widget(ASAF8 *module)
     {
         int x, y;
-        ASAF8 *pmod;
-
         // box.size = Vec( 15*12, 380);
 
         setModule(module);
 
-        if (!module)
-            pmod = &g_ASAF8_Browser;
-        else
-            pmod = module;
-
         setPanel(APP->window->loadSvg(asset::plugin(thePlugin, "res/ASAF8.svg")));
 
-        pmod->m_pTextLabel = new Label();
-        pmod->m_pTextLabel->box.pos = Vec(90, 28);
-        pmod->m_pTextLabel->text = "----";
-        addChild(pmod->m_pTextLabel);
+        m_pTextLabel = new Label();
+        m_pTextLabel->box.pos = Vec(90, 28);
+        m_pTextLabel->text = "----";
+        addChild(m_pTextLabel);
 
         x = 3;
         y = 77;
@@ -170,10 +167,10 @@ struct ASAF8_Widget : ModuleWidget
             addInput(createInput<MyPortInSmall>(Vec(x + 47, y), module, ASAF8::IN_TRIGS + ch));
 
             // trigger button
-            pmod->m_pTrigButton[ch] =
+            m_pTrigButton[ch] =
                 new MyLEDButton(x + 68, y - 1, 19, 19, 15.0, DWRGB(180, 180, 180), DWRGB(0, 255, 0),
                                 MyLEDButton::TYPE_SWITCH, ch, module, ASAF8_TrigButton);
-            addChild(pmod->m_pTrigButton[ch]);
+            addChild(m_pTrigButton[ch]);
 
             // speed knobs
             addParam(
@@ -194,17 +191,21 @@ struct ASAF8_Widget : ModuleWidget
         addChild(createWidget<ScrewSilver>(Vec(box.size.x - 30, 0)));
         addChild(createWidget<ScrewSilver>(Vec(15, 365)));
         addChild(createWidget<ScrewSilver>(Vec(box.size.x - 30, 365)));
+    }
 
-        if (module)
+    void step() override
+    {
+        auto az = dynamic_cast<ASAF8 *>(module);
+        if (az)
         {
-            module->envSeg_from_points(0.0f, 1.0f, 0.2f, 0.975f, &module->m_EnvSeg[0]);
-            module->envSeg_from_points(0.2f, 0.975f, 0.3f, 0.9f, &module->m_EnvSeg[1]);
-            module->envSeg_from_points(0.3f, 0.9f, 0.7f, 0.1f, &module->m_EnvSeg[2]);
-            module->envSeg_from_points(0.7f, 0.1f, 0.8f, 0.075f, &module->m_EnvSeg[3]);
-            module->envSeg_from_points(0.8f, 0.075f, 1.0f, 0.0f, &module->m_EnvSeg[4]);
-
-            module->m_bInitialized = true;
+            if (m_pTextLabel->text != az->m_sLabel)
+                m_pTextLabel->text = az->m_sLabel;
+            for (int i = 0; i < nCHANNELS; i++)
+            {
+                m_pTrigButton[i]->Set(az->m_Triggered[i]);
+            }
         }
+        Widget::step();
     }
 };
 
@@ -241,20 +242,15 @@ void ASAF8::dataFromJson(json_t *root)
 {
     JsonParams(FROMJSON, root);
 
-    if (!m_bInitialized)
-        return;
-
     for (int ch = 0; ch < nCHANNELS; ch++)
     {
         if (m_State[ch] == STATE_OFF || m_State[ch] == STATE_FOUT)
         {
-            m_pTrigButton[ch]->Set(false);
             m_State[ch] = STATE_OFF;
             m_fFade[ch] = 0.0f;
         }
         else
         {
-            m_pTrigButton[ch]->Set(true);
             m_State[ch] = STATE_ON;
             m_fFade[ch] = 1.0f;
         }
@@ -330,19 +326,15 @@ bool ASAF8::processFade(int ch, bool bfin)
 
 void ASAF8::process(const ProcessArgs &args)
 {
-    if (!m_bInitialized)
-        return;
-
     for (int ch = 0; ch < nCHANNELS; ch++)
     {
         switch (m_State[ch])
         {
         case STATE_FOUT:
 
-            if (inputs[IN_TRIGS + ch].getNormalVoltage(0.0f) >= FADE_GATE_LVL ||
-                m_pTrigButton[ch]->m_bOn)
+            if (inputs[IN_TRIGS + ch].getNormalVoltage(0.0f) >= FADE_GATE_LVL || m_Triggered[ch])
             {
-                m_pTrigButton[ch]->Set(true);
+                m_Triggered[ch] = true;
                 m_fPos[ch] = 1.0f - m_fPos[ch];
                 m_State[ch] = STATE_FIN;
                 break;
@@ -357,10 +349,9 @@ void ASAF8::process(const ProcessArgs &args)
 
         case STATE_OFF:
 
-            if (inputs[IN_TRIGS + ch].getNormalVoltage(0.0f) >= FADE_GATE_LVL ||
-                m_pTrigButton[ch]->m_bOn)
+            if (inputs[IN_TRIGS + ch].getNormalVoltage(0.0f) >= FADE_GATE_LVL || m_Triggered[ch])
             {
-                m_pTrigButton[ch]->Set(true);
+                m_Triggered[ch] = true;
                 m_State[ch] = STATE_FIN;
                 m_fPos[ch] = 0.0f;
                 break;
@@ -371,10 +362,9 @@ void ASAF8::process(const ProcessArgs &args)
 
         case STATE_FIN:
 
-            if (inputs[IN_TRIGS + ch].getNormalVoltage(1.0f) < FADE_GATE_LVL ||
-                !m_pTrigButton[ch]->m_bOn)
+            if (inputs[IN_TRIGS + ch].getNormalVoltage(1.0f) < FADE_GATE_LVL || !m_Triggered[ch])
             {
-                m_pTrigButton[ch]->Set(false);
+                m_Triggered[ch] = false;
                 m_fPos[ch] = 1.0f - m_fPos[ch];
                 m_State[ch] = STATE_FOUT;
                 break;
@@ -389,10 +379,9 @@ void ASAF8::process(const ProcessArgs &args)
 
         case STATE_ON:
 
-            if (inputs[IN_TRIGS + ch].getNormalVoltage(1.0f) < FADE_GATE_LVL ||
-                !m_pTrigButton[ch]->m_bOn)
+            if (inputs[IN_TRIGS + ch].getNormalVoltage(1.0f) < FADE_GATE_LVL || !m_Triggered[ch])
             {
-                m_pTrigButton[ch]->Set(false);
+                m_Triggered[ch] = false;
                 m_State[ch] = STATE_FOUT;
                 m_fPos[ch] = 0.0f;
                 break;
