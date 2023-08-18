@@ -185,7 +185,7 @@
 
     {
       "slug": "OSC_WaveMorph_3",
-      "name": "(Untested) Wave morph Oscillator",
+      "name": "Wave morph Oscillator",
       "description": "CV Morph 3 Drawable Waveforms",
       "tags": [
         "Oscillator"

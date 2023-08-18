@@ -78,6 +78,10 @@ struct OSC_WaveMorph_3 : Module
 
     Label *m_pTextLabel = NULL;
 
+    std::atomic<bool> m_refreshWidgets{false};
+    void doWidgetRefresh();
+
+
     // filter
     enum FILTER_TYPES
     {
@@ -244,14 +248,9 @@ struct OSC_WaveMorph_3_Widget : ModuleWidget
 
     OSC_WaveMorph_3_Widget(OSC_WaveMorph_3 *module)
     {
-        OSC_WaveMorph_3 *pmod;
+        OSC_WaveMorph_3 *pmod{module};
 
         setModule(module);
-
-        if (!module)
-            pmod = &OSC_WaveMorph_3Browser;
-        else
-            pmod = module;
 
         // box.size = Vec( 15*16, 380 );
         setPanel(APP->window->loadSvg(asset::plugin(thePlugin, "res/OSC_WaveMorph_3.svg")));
@@ -266,6 +265,9 @@ struct OSC_WaveMorph_3_Widget : ModuleWidget
 
         // input morph cv
         addInput(createInput<MyPortInSmall>(Vec(14, 311), module, OSC_WaveMorph_3::INPUT_MORPHCV));
+
+        if (!pmod)
+            return;
 
         // invert
         pmod->m_pButtonInvert =
@@ -355,7 +357,23 @@ struct OSC_WaveMorph_3_Widget : ModuleWidget
             createOutput<MyPortOutSmall>(Vec(203, 218), module, OSC_WaveMorph_3::OUTPUT_AUDIO));
 
         if (module)
+        {
             module->m_bInitialized = true;
+            module->doWidgetRefresh();
+        }
+    }
+
+    void step() override
+    {
+        auto az = dynamic_cast<OSC_WaveMorph_3 *>(module);
+        if (az)
+        {
+            if (az->m_refreshWidgets)
+            {
+                az->doWidgetRefresh();
+            }
+        }
+        Widget::step();
     }
 };
 
@@ -395,6 +413,19 @@ void OSC_WaveMorph_3::dataFromJson(json_t *root)
 {
     JsonParams(FROMJSON, root);
 
+    if (m_pEnvelope)
+    {
+        doWidgetRefresh();
+    }
+    else
+    {
+        m_refreshWidgets = true;
+    }
+}
+
+void OSC_WaveMorph_3::doWidgetRefresh()
+{
+    m_refreshWidgets = false;
     m_pEnvelope->setDataAll((int *)m_GraphData);
 
     m_pButtonSolo->Set(m_bSolo);
