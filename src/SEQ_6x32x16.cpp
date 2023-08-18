@@ -518,6 +518,7 @@ void SEQ_6x32x16::dataFromJson(json_t *root)
 
 void SEQ_6x32x16::doWidgetRefresh()
 {
+    m_refreshWidgets = false;
     for (int ch = 0; ch < nCHANNELS; ch++)
     {
         m_pButtonAutoPat[ch]->Set(m_bAutoPatChange[ch]);

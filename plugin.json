@@ -53,12 +53,11 @@
     {
 
       "slug": "ARP700",
-      "name": "(Untested) ARP 700",
+      "name": "ARP 700",
       "description": "7 Note programmable Arpeggiator",
       "tags": [
         "Arpeggiator"
-      ],
-      "hidden": true
+      ]
     },
 
     {

@@ -61,7 +61,7 @@ typedef struct
 
 } MAIN_SYNC_CLOCK;
 
-typedef struct
+struct PAT_STEP_STRUCT
 {
     // timing
     bool bTrig;
@@ -87,8 +87,7 @@ typedef struct
     // voct out
     float fCvStartOut = 0;
     float fCvEndOut = 0;
-
-} PAT_STEP_STRUCT;
+};
 
 //-----------------------------------------------------
 // Module Definition
@@ -128,7 +127,12 @@ struct ARP700 : Module
     bool m_bInitialized = false;
 
     // Contructor
-    ARP700() { config(nPARAMS, nINPUTS, nOUTPUTS); }
+    ARP700()
+    {
+        config(nPARAMS, nINPUTS, nOUTPUTS);
+        m_Clock.fsynclen = 2.0 * 48.0; // default to 120bpm
+        m_Clock.IgnoreClockCount = 2;
+    }
 
     // pattern
     ARP_PATTERN_STRUCT m_PatternSave[MAX_ARP_PATTERNS] = {};
@@ -147,6 +151,9 @@ struct ARP700 : Module
     MyLEDButton *m_pButtonTrig[MAX_ARP_NOTES] = {};
     MyLEDButtonStrip *m_plastbut = NULL;
     MyLEDButton *m_pButtonCopy = NULL;
+
+    std::atomic<bool> m_refreshWidgets{false};
+    void doWidgetRefresh();
 
     // clock
     dsp::SchmittTrigger m_SchTrigClk;
@@ -185,8 +192,6 @@ struct ARP700 : Module
     void ArpStep(bool bReset);
     void Copy(bool bOn);
 };
-
-ARP700 ARP700Browser;
 
 //-----------------------------------------------------
 // Procedure:   ARP700_ModeSelect
@@ -344,16 +349,11 @@ struct ARP700_Widget : ModuleWidget
     ARP700_Widget(ARP700 *module)
     {
         int x, y, note, param;
-        ARP700 *pmod;
+        ARP700 *pmod{module};
 
         // box.size = Vec( 15*27, 380);
 
         setModule(module);
-
-        if (!module)
-            pmod = &ARP700Browser;
-        else
-            pmod = module;
 
         setPanel(APP->window->loadSvg(asset::plugin(thePlugin, "res/ARP700.svg")));
 
@@ -362,6 +362,9 @@ struct ARP700_Widget : ModuleWidget
         addChild(createWidget<ScrewSilver>(Vec(box.size.x - 30, 0)));
         addChild(createWidget<ScrewSilver>(Vec(15, 365)));
         addChild(createWidget<ScrewSilver>(Vec(box.size.x - 30, 365)));
+
+        if (!pmod)
+            return;
 
         for (int i = 0; i < 37; i++)
             pmod->m_fKeyNotes[i] = (float)i * SEMI;
@@ -478,12 +481,22 @@ struct ARP700_Widget : ModuleWidget
 
         if (module)
         {
-            module->m_Clock.fsynclen = 2.0 * 48.0; // default to 120bpm
-            module->m_Clock.IgnoreClockCount = 2;
             module->m_bInitialized = true;
-
-            module->onReset();
+            module->doWidgetRefresh();
         }
+    }
+
+    void step() override
+    {
+        auto az = dynamic_cast<ARP700 *>(module);
+        if (az)
+        {
+            if (az->m_refreshWidgets)
+            {
+                az->doWidgetRefresh();
+            }
+        }
+        Widget::step();
     }
 };
 
@@ -521,18 +534,25 @@ json_t *ARP700::dataToJson()
 //-----------------------------------------------------
 void ARP700::dataFromJson(json_t *root)
 {
-    std::cout << "A" << std::endl;
     JsonParams(FROMJSON, root);
 
-    std::cout << "B " << m_pButtonPause << std::endl;
-    // m_pButtonPause->Set( m_bPauseState );
-    std::cout << "C" << std::endl;
-    // pKeyboardWidget->setkey( m_PatternSave[ m_PatCtrl.pat ].notes );
+    if (pKeyboardWidget)
+    {
+        doWidgetRefresh();
+    }
+    else
+    {
+        m_refreshWidgets = true;
+    }
+}
 
-    std::cout << "D" << std::endl;
+void ARP700::doWidgetRefresh()
+{
+    m_refreshWidgets = false;
+    m_pButtonPause->Set(m_bPauseState);
+    pKeyboardWidget->setkey(m_PatternSave[m_PatCtrl.pat].notes);
+
     ChangePattern(m_PatCtrl.pat, true);
-
-    std::cout << "E" << std::endl;
     ArpStep(true);
 }
 
