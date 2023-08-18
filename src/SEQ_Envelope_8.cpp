@@ -7,7 +7,6 @@
  * step. See comments below.
  */
 
-
 //-----------------------------------------------------
 // Module Definition
 //

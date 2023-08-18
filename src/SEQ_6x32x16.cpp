@@ -89,6 +89,9 @@ struct SEQ_6x32x16 : Module
     MyLEDButton *m_pButtonHoldCV[nCHANNELS] = {};
     MyLEDButton *m_pButtonClear[nCHANNELS] = {};
 
+    std::atomic<bool> m_refreshWidgets{false};
+    void doWidgetRefresh();
+
     bool m_bAutoPatChange[nCHANNELS] = {};
     bool m_bHoldCVState[nCHANNELS] = {};
 
@@ -125,8 +128,6 @@ struct SEQ_6x32x16 : Module
     void SetPendingProg(int ch, int prog);
     void Copy(int kb, bool bOn);
 };
-
-SEQ_6x32x16 SEQ_6x32x16Browser;
 
 //-----------------------------------------------------
 // MyLEDButton_TrigMute
@@ -274,7 +275,7 @@ struct SEQ_6x32x16_CVRange : MenuItem
         if (menumod->m_RangeSelect > 2)
             menumod->m_RangeSelect = 0;
 
-        sprintf(menumod->m_strRange, "%.1fV", menumod->m_fCVRanges[menumod->m_RangeSelect]);
+        snprintf(menumod->m_strRange, 10, "%.1fV", menumod->m_fCVRanges[menumod->m_RangeSelect]);
     }
 
     void step() override { rightText = menumod->m_strRange; }
@@ -292,16 +293,9 @@ struct SEQ_6x32x16_Widget : ModuleWidget
     {
         int x, y, x2, y2;
         ParamWidget *pWidget = NULL;
-        SEQ_6x32x16 *pmod;
-
-        // box.size = Vec( 15*41, 380);
+        SEQ_6x32x16 *pmod{module};
 
         setModule(module);
-
-        if (!module)
-            pmod = &SEQ_6x32x16Browser;
-        else
-            pmod = module;
 
         setPanel(APP->window->loadSvg(asset::plugin(thePlugin, "res/SEQ_6x32x16.svg")));
 
@@ -310,6 +304,9 @@ struct SEQ_6x32x16_Widget : ModuleWidget
         addChild(createWidget<ScrewSilver>(Vec(box.size.x - 30, 0)));
         addChild(createWidget<ScrewSilver>(Vec(15, 365)));
         addChild(createWidget<ScrewSilver>(Vec(box.size.x - 30, 365)));
+
+        if (!module)
+            return;
 
         x = 7;
         y = 22;
@@ -428,8 +425,7 @@ struct SEQ_6x32x16_Widget : ModuleWidget
         if (module)
         {
             module->m_bInitialized = true;
-
-            module->onReset();
+            module->doWidgetRefresh();
         }
     }
 
@@ -450,6 +446,19 @@ struct SEQ_6x32x16_Widget : ModuleWidget
             createMenuItem<SEQ_6x32x16_CVRange>("VRange (15, 10, 5):");
         pMergeItem1->menumod = mod;
         menu->addChild(pMergeItem1);
+    }
+
+    void step() override
+    {
+        auto az = dynamic_cast<SEQ_6x32x16 *>(module);
+        if (az)
+        {
+            if (az->m_refreshWidgets)
+            {
+                az->doWidgetRefresh();
+            }
+        }
+        Widget::step();
     }
 };
 
@@ -495,6 +504,20 @@ void SEQ_6x32x16::dataFromJson(json_t *root)
 {
     JsonParams(FROMJSON, root);
 
+    if (m_pButtonTrigMute)
+    {
+        doWidgetRefresh();
+    }
+    else
+    {
+        m_refreshWidgets = true;
+    }
+
+    snprintf(m_strRange, 10, "%.1fV", m_fCVRanges[m_RangeSelect]);
+}
+
+void SEQ_6x32x16::doWidgetRefresh()
+{
     for (int ch = 0; ch < nCHANNELS; ch++)
     {
         m_pButtonAutoPat[ch]->Set(m_bAutoPatChange[ch]);
@@ -511,8 +534,6 @@ void SEQ_6x32x16::dataFromJson(json_t *root)
 
     if (m_bTrigMute)
         m_pButtonTrigMute->Set(m_bTrigMute);
-
-    sprintf(m_strRange, "%.1fV", m_fCVRanges[m_RangeSelect]);
 }
 
 //-----------------------------------------------------

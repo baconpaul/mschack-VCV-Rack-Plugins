@@ -63,12 +63,11 @@
 
     {
       "slug": "Seq_6ch_32step",
-      "name": "(Untested) SEQ 6 x 32",
+      "name": "SEQ 6 x 32",
       "description": "6 Channel 32 step voltage/trigger sequencer",
       "tags": [
         "Sequencer"
-      ],
-      "hidden": true
+      ]
     },
 
     {
