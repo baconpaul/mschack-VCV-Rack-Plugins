@@ -97,7 +97,12 @@ struct Alienz : Module
     {
         config(nPARAMS, nINPUTS, nOUTPUTS, nLIGHTS);
 
+        putseed((int)random::u32());
+
         configParam(PARAM_SPEED, 0.0, 8.0, 4.0, "Morph speed");
+        configInput(IN_RANDTRIG, "Seed Randomization");
+        configInput(IN_GATE, "Signal Activation Gate");
+        configOutput(OUT, "Waveform");
     }
 
     // osc
@@ -119,6 +124,7 @@ struct Alienz : Module
 
     std::string m_sLabel1, m_sLabel2;
     std::bitset<nCHANNELS> m_seedOn{};
+    std::atomic<int> m_flashRandom{0};
 
     int m_Seed = 0;
     int m_FadeState = FADE_IN;
@@ -198,6 +204,7 @@ void Alienz_RandButton(void *pClass, int id, bool bOn)
     Alienz *mymodule;
     mymodule = (Alienz *)pClass;
 
+    mymodule->m_flashRandom = 5;
     mymodule->ChangeSeedPending((int)random::u32());
 }
 
@@ -287,6 +294,15 @@ struct Alienz_Widget : ModuleWidget
             for (int i = 0; i < 32; i++)
             {
                 m_pButtonSeed[i]->Set(az->m_seedOn[i]);
+            }
+            if (az->m_flashRandom > 0)
+            {
+                az->m_flashRandom--;
+                m_pButtonRand->Set(true);
+            }
+            else
+            {
+                m_pButtonRand->Set(false);
             }
         }
         Widget::step();
@@ -628,6 +644,7 @@ void Alienz::process(const ProcessArgs &args)
     // randomize trigger
     if (m_SchmitTrigRand.process(inputs[IN_RANDTRIG].getNormalVoltage(0.0f)))
     {
+        m_flashRandom = 5;
         ChangeSeedPending((int)random::u32());
     }
 

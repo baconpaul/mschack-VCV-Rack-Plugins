@@ -140,7 +140,7 @@ void OSC_WaveMorph_3_EnvelopeEditCALLBACK(void *pClass, float val)
     OSC_WaveMorph_3 *mymodule;
     mymodule = (OSC_WaveMorph_3 *)pClass;
 
-    sprintf(strVal, "[%.3fV]", val);
+    snprintf(strVal, 10, "[%.3fV]", val);
 
     mymodule->m_pTextLabel->text = strVal;
 }

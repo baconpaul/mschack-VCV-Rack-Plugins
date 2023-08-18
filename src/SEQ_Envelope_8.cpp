@@ -154,7 +154,7 @@ void EnvelopeEditCALLBACK(void *pClass, float val)
     if (!pClass)
         return;
 
-    sprintf(strVal, "[%.3fV]", val);
+    snprintf(strVal, 10, "[%.3fV]", val);
 
     mymodule->m_pTextLabel->text = strVal;
 }

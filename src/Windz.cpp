@@ -83,11 +83,17 @@ struct Windz : Module
     {
         config(nPARAMS, nINPUTS, nOUTPUTS, nLIGHTS);
 
+        putseed((int)random::u32());
+
         configParam(PARAM_SPEED, 0.0, 8.0, 4.0, "Morph speed");
+        configInput(IN_RANDTRIG, "Seed Randomization");
+        configOutput(OUT_L, "Left Windz");
+        configOutput(OUT_R, "Right Windz");
     }
 
     std::string m_sLabel1, m_sLabel2;
     std::bitset<nCHANNELS> m_seedOn{};
+    std::atomic<int> m_flashRandom{0};
 
     // modulation envelopes
     EnvelopeData m_mod[nCHANNELS][nMODS] = {};
@@ -178,6 +184,7 @@ void Windz_RandButton(void *pClass, int id, bool bOn)
     Windz *mymodule;
     mymodule = (Windz *)pClass;
 
+    mymodule->m_flashRandom = 5;
     mymodule->ChangeSeedPending((int)random::u32());
 }
 
@@ -273,6 +280,15 @@ struct Windz_Widget : ModuleWidget
             for (int i = 0; i < 32; i++)
             {
                 m_pButtonSeed[i]->Set(az->m_seedOn[i]);
+            }
+            if (az->m_flashRandom > 0)
+            {
+                az->m_flashRandom--;
+                m_pButtonRand->Set(true);
+            }
+            else
+            {
+                m_pButtonRand->Set(false);
             }
         }
         Widget::step();
@@ -579,6 +595,7 @@ void Windz::process(const ProcessArgs &args)
     // randomize trigger
     if (m_SchmitTrigRand.process(inputs[IN_RANDTRIG].getNormalVoltage(0.0f)))
     {
+        m_flashRandom = 5;
         ChangeSeedPending((int)random::u32());
     }
 
