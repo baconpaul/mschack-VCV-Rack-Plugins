@@ -234,6 +234,9 @@ void Seq_Triad2_Trig(void *pClass, int id, bool bOn)
 void Seq_Triad2_Widget_NoteChangeCallback(void *pClass, int kb, int notepressed, int *pnotes,
                                           bool bOn, int button, int mod)
 {
+    if (kb < 0 || kb >= nKEYBOARDS)
+        return;
+
     bool bCtrl = false;
     Seq_Triad2 *mymodule = (Seq_Triad2 *)pClass;
 
@@ -403,7 +406,6 @@ struct Seq_Triad2_Widget : ModuleWidget
 
     Seq_Triad2_Widget(Seq_Triad2 *module)
     {
-        Seq_Triad2 *pmod;
         int kb, x, x2, y, y2;
 
         setModule(module);

@@ -1004,7 +1004,10 @@ void Mixer_::process(const ProcessArgs &args)
     int section = 0;
     int ch, aux, group = 0;
     float GroupMixL[MAX_GROUPS] = {0}, GroupMixR[MAX_GROUPS] = {0}, fMixOutL = 0.0f,
-          fMixOutR = 0.0f, inL, inR, flevel, fx, fy, fade[MAX_GROUPS];
+          fMixOutR = 0.0f, inL, inR, flevel;
+#if nGROUPS > 0
+    float fx, fy, fade[MAX_GROUPS];
+#endif
     float auxL[nAUX] = {}, auxR[nAUX] = {};
     bool bChannelActive, bGroupActive[MAX_GROUPS] = {false};
     float pan, levelmult = 1.0;
@@ -1023,12 +1026,12 @@ void Mixer_::process(const ProcessArgs &args)
     if (m_bGainLevelx2)
         levelmult = 1.5f;
 
+#if nGROUPS > 0
     fade[0] = 1.0f;
     fade[1] = 1.0f;
     fade[2] = 1.0f;
     fade[3] = 1.0f;
 
-#if nGROUPS > 0
     // calc XFADE
     if (inputs[IN_FADEX].isConnected() || inputs[IN_FADEY].isConnected())
     {

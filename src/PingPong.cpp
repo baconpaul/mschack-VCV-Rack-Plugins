@@ -172,8 +172,6 @@ struct PingPong_Widget : ModuleWidget
 
     PingPong_Widget(PingPong *module)
     {
-        PingPong *pmod;
-
         // box.size = Vec( 15*8, 380);
 
         setModule(module);

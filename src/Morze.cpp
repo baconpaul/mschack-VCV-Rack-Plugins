@@ -157,11 +157,7 @@ struct Morze_Widget : ModuleWidget
 
     Morze_Widget(Morze *module)
     {
-        Morze *pmod;
-
         setModule(module);
-
-        pmod = module;
 
         // box.size = Vec( 15*5, 380 );
         setPanel(APP->window->loadSvg(asset::plugin(thePlugin, "res/Morze.svg")));

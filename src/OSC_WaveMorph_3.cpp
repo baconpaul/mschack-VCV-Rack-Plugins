@@ -81,7 +81,6 @@ struct OSC_WaveMorph_3 : Module
     std::atomic<bool> m_refreshWidgets{false};
     void doWidgetRefresh();
 
-
     // filter
     enum FILTER_TYPES
     {

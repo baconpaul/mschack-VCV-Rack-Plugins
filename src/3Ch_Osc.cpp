@@ -465,13 +465,7 @@ void Osc_3Ch::onRandomize()
 // Procedure:   SetWaveLights
 //
 //-----------------------------------------------------
-void Osc_3Ch::SetWaveLights(void)
-{
-    int ch;
-
-    if (!m_bInitialized)
-        return;
-}
+void Osc_3Ch::SetWaveLights(void) {}
 
 //-----------------------------------------------------
 // Procedure:   initialize

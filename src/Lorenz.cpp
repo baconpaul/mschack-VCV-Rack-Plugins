@@ -167,12 +167,8 @@ struct Lorenz_Widget : ModuleWidget
     Lorenz_Widget(Lorenz *module)
     {
         int i, x, y;
-        Lorenz *pmod;
         // box.size = Vec( 15*16, 380); 240
-
         setModule(module);
-
-        pmod = module;
 
         setPanel(APP->window->loadSvg(asset::plugin(thePlugin, "res/Lorenz.svg")));
 
@@ -432,8 +428,6 @@ void Lorenz::process(const ProcessArgs &args)
 {
     int x, y;
     float p[nPAR], t[nPAR], xi, yi, zi, outx, outy, outz, out, dc;
-    char strVal[20] = {};
-    static int bla = 0;
 
     if (!m_bInitialized)
         return;
