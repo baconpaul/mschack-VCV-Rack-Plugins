@@ -52,7 +52,7 @@ struct SEQ_6x32x16 : Module
     bool m_bBiLevelState[nCHANNELS] = {};
 
     SinglePatternClocked32 *m_pPatternDisplay[nCHANNELS] = {};
-    int m_Pattern[nCHANNELS][nPROG][nSTEPS];
+    int m_Pattern[nCHANNELS][nPROG][nSTEPS] = {};
     int m_MaxPat[nCHANNELS][nPROG] = {};
 
     PatternSelectStrip *m_pProgramDisplay[nCHANNELS] = {};
