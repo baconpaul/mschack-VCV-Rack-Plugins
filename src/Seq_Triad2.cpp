@@ -1,4 +1,5 @@
 #include "mscHack.hpp"
+#include <array>
 
 #define nKEYBOARDS 3
 #define nKEYS 37
@@ -66,24 +67,28 @@ struct Seq_Triad2 : Module
     bool m_bInitialized = false;
 
     // octaves
-    int m_Octave[nKEYBOARDS] = {};
-    float m_fCvStartOut[nKEYBOARDS] = {};
-    float m_fCvEndOut[nKEYBOARDS] = {};
+    int m_Octave[nKEYBOARDS]{};
+    float m_fCvStartOut[nKEYBOARDS]{};
+    float m_fCvEndOut[nKEYBOARDS]{};
 
     // steps
+    template <typename T = bool> using msgForUI_t = std::array<std::atomic<T>, nKEYBOARDS>;
     int m_CurrentStep[nKEYBOARDS] = {};
     PATTERN_STRUCT m_Notes[nKEYBOARDS][nPATTERNS][nSTEPS] = {};
+
+    msgForUI_t<> m_bResetKeyboard{false, false, false};
     dsp::SchmittTrigger m_SchTrigStepClk[nKEYBOARDS];
-    PatternSelectStrip *m_pStepSelectStrip[nKEYBOARDS] = {};
+    // PatternSelectStrip *m_pStepSelectStrip[nKEYBOARDS] = {};
     int m_nMaxSteps[nKEYBOARDS][nPATTERNS] = {};
     int m_CopySrc = NO_COPY;
+    msgForUI_t<> m_bCopyState{false, false, false};
+    msgForUI_t<int> m_iPendingPattern{-1, -1, -1};
 
     // pattern save
     int m_CurrentPattern[nKEYBOARDS] = {};
     PHRASE_CHANGE_STRUCT m_PatternPending[nKEYBOARDS] = {};
     dsp::SchmittTrigger m_SchTrigPatternClk[nKEYBOARDS] = {};
     int m_MaxPat[nKEYBOARDS] = {0};
-    PatternSelectStrip *m_pPatternSelectStrip[nKEYBOARDS] = {};
 
     bool m_bResetToPattern1[nKEYBOARDS] = {};
 
@@ -92,11 +97,9 @@ struct Seq_Triad2 : Module
 
     // trig mute
     bool m_bTrigMute = false;
-    MyLEDButton *m_pButtonTrigMute = NULL;
 
     // channel trig mute
     bool m_bChTrigMute[nKEYBOARDS] = {};
-    MyLEDButton *m_pButtonChTrigMute[nKEYBOARDS] = {};
 
     // triggers
     bool m_bTrig[nKEYBOARDS] = {};
@@ -113,16 +116,10 @@ struct Seq_Triad2 : Module
     float m_fLastNotePlayed[nKEYBOARDS];
     bool m_bWasLastNotePlayed[nKEYBOARDS] = {};
 
-    Keyboard_3Oct_Widget *pKeyboardWidget[nKEYBOARDS];
+    // Keyboard_3Oct_Widget *pKeyboardWidget[nKEYBOARDS];
     float m_fKeyNotes[37];
 
     float m_VoctOffsetIn[nKEYBOARDS] = {};
-
-    // buttons
-    MyLEDButtonStrip *m_pButtonOctaveSelect[nKEYBOARDS] = {};
-    MyLEDButton *m_pButtonPause[nKEYBOARDS] = {};
-    MyLEDButton *m_pButtonTrig[nKEYBOARDS] = {};
-    MyLEDButton *m_pButtonCopy[nKEYBOARDS] = {};
 
     // Contructor
     Seq_Triad2()
@@ -155,8 +152,6 @@ struct Seq_Triad2 : Module
     void SetPendingPattern(int kb, int phrase);
     void Copy(int kb, bool bOn);
 };
-
-Seq_Triad2 Seq_Triad2Browser;
 
 //-----------------------------------------------------
 // Seq_Triad2_OctSelect
@@ -268,15 +263,18 @@ void Seq_Triad2_Widget_NoteChangeCallback(void *pClass, int kb, int notepressed,
             mymodule->m_Notes[kb][mymodule->m_CurrentPattern[kb]][mymodule->m_CurrentStep[kb]]
                 .bTrigOff = false;
 
-        mymodule->m_pButtonTrig[kb]->Set(bCtrl);
+        // TODO - blink the trigger button
+        // mymodule->m_pButtonTrig[kb]->Set(bCtrl);
 
         mymodule->m_Notes[kb][mymodule->m_CurrentPattern[kb]][mymodule->m_CurrentStep[kb]].note =
             notepressed;
         mymodule->SetKey(kb);
     }
     else
+    {
         mymodule->m_Notes[kb][mymodule->m_CurrentPattern[kb]][mymodule->m_CurrentStep[kb]].note =
             notepressed;
+    }
 
     mymodule->SetOut(kb);
 }
@@ -393,6 +391,15 @@ struct Seq_Triad2_Ch3Reset : MenuItem
 //-----------------------------------------------------
 struct Seq_Triad2_Widget : ModuleWidget
 {
+    PatternSelectStrip *m_pStepSelectStrip[nKEYBOARDS]{};
+    PatternSelectStrip *m_pPatternSelectStrip[nKEYBOARDS]{};
+    MyLEDButton *m_pButtonTrigMute{nullptr};
+    MyLEDButton *m_pButtonChTrigMute[nKEYBOARDS]{};
+    Keyboard_3Oct_Widget *pKeyboardWidget[nKEYBOARDS]{};
+    MyLEDButtonStrip *m_pButtonOctaveSelect[nKEYBOARDS]{};
+    MyLEDButton *m_pButtonPause[nKEYBOARDS]{};
+    MyLEDButton *m_pButtonTrig[nKEYBOARDS]{};
+    MyLEDButton *m_pButtonCopy[nKEYBOARDS]{};
 
     Seq_Triad2_Widget(Seq_Triad2 *module)
     {
@@ -400,11 +407,6 @@ struct Seq_Triad2_Widget : ModuleWidget
         int kb, x, x2, y, y2;
 
         setModule(module);
-
-        if (!module)
-            pmod = &Seq_Triad2Browser;
-        else
-            pmod = module;
 
         // box.size = Vec( 15*25, 380);
         setPanel(APP->window->loadSvg(asset::plugin(thePlugin, "res/TriadSequencer2.svg")));
@@ -417,61 +419,61 @@ struct Seq_Triad2_Widget : ModuleWidget
         for (kb = 0; kb < nKEYBOARDS; kb++)
         {
             // channel trig mute
-            pmod->m_pButtonChTrigMute[kb] = new MyLEDButton(
+            m_pButtonChTrigMute[kb] = new MyLEDButton(
                 x + 310, y + 3, 15, 15, 13.0, DWRGB(180, 180, 180), DWRGB(255, 0, 0),
                 MyLEDButton::TYPE_SWITCH, kb, module, Seq_Triad2_ChTrigMute);
-            addChild(pmod->m_pButtonChTrigMute[kb]);
+            addChild(m_pButtonChTrigMute[kb]);
 
             addInput(createInput<MyPortInSmall>(Vec(x + 285, y + 1), module,
                                                 Seq_Triad2::IN_CHANNEL_TRIG_MUTE + kb));
 
             // pause button
-            pmod->m_pButtonPause[kb] =
+            m_pButtonPause[kb] =
                 new MyLEDButton(x + 60, y + 4, 11, 11, 8.0, DWRGB(180, 180, 180), DWRGB(255, 0, 0),
                                 MyLEDButton::TYPE_SWITCH, kb, module, Seq_Triad2_Pause);
-            addChild(pmod->m_pButtonPause[kb]);
+            addChild(m_pButtonPause[kb]);
 
             // trig button
-            pmod->m_pButtonTrig[kb] =
+            m_pButtonTrig[kb] =
                 new MyLEDButton(x + 260, y + 5, 11, 11, 8.0, DWRGB(180, 180, 180), DWRGB(255, 0, 0),
                                 MyLEDButton::TYPE_SWITCH, kb, module, Seq_Triad2_Trig);
-            addChild(pmod->m_pButtonTrig[kb]);
+            addChild(m_pButtonTrig[kb]);
 
             // glide knob
             addParam(createParam<Knob_Yellow1_15>(Vec(x + 235, y + 86), module,
                                                   Seq_Triad2::PARAM_GLIDE + kb));
 
-            pmod->m_pButtonCopy[kb] = new MyLEDButton(
-                x + 194, y + 89, 11, 11, 8.0, DWRGB(180, 180, 180), DWRGB(0, 244, 244),
-                MyLEDButton::TYPE_SWITCH, kb, module, MyLEDButton_Copy);
-            addChild(pmod->m_pButtonCopy[kb]);
+            m_pButtonCopy[kb] = new MyLEDButton(x + 194, y + 89, 11, 11, 8.0, DWRGB(180, 180, 180),
+                                                DWRGB(0, 244, 244), MyLEDButton::TYPE_SWITCH, kb,
+                                                module, MyLEDButton_Copy);
+            addChild(m_pButtonCopy[kb]);
 
             x2 = x + 274;
 
             // octave select
-            pmod->m_pButtonOctaveSelect[kb] = new MyLEDButtonStrip(
+            m_pButtonOctaveSelect[kb] = new MyLEDButtonStrip(
                 x2, y + 90, 11, 11, 3, 8.0, nOCTAVESEL, false, DWRGB(180, 180, 180),
                 DWRGB(0, 255, 255), MyLEDButtonStrip::TYPE_EXCLUSIVE, kb, module,
                 Seq_Triad2_OctSelect);
-            addChild(pmod->m_pButtonOctaveSelect[kb]);
+            addChild(m_pButtonOctaveSelect[kb]);
 
             // keyboard widget
-            pmod->pKeyboardWidget[kb] =
+            pKeyboardWidget[kb] =
                 new Keyboard_3Oct_Widget(x + 39, y + 19, 1, kb, DWRGB(255, 128, 64), module,
                                          Seq_Triad2_Widget_NoteChangeCallback);
-            addChild(pmod->pKeyboardWidget[kb]);
+            addChild(pKeyboardWidget[kb]);
 
             // step selects
-            pmod->m_pStepSelectStrip[kb] = new PatternSelectStrip(
+            m_pStepSelectStrip[kb] = new PatternSelectStrip(
                 x + 79, y + 1, 9, 7, DWRGB(255, 128, 64), DWRGB(128, 64, 0), DWRGB(255, 0, 128),
                 DWRGB(128, 0, 64), nSTEPS, kb, module, Seq_Triad2_Widget_StepChangeCallback);
-            addChild(pmod->m_pStepSelectStrip[kb]);
+            addChild(m_pStepSelectStrip[kb]);
 
             // phrase selects
-            pmod->m_pPatternSelectStrip[kb] = new PatternSelectStrip(
+            m_pPatternSelectStrip[kb] = new PatternSelectStrip(
                 x + 79, y + 86, 9, 7, DWRGB(255, 255, 0), DWRGB(128, 128, 64), DWRGB(0, 255, 255),
                 DWRGB(0, 128, 128), nPATTERNS, kb, module, Seq_Triad2_Widget_PatternChangeCallback);
-            addChild(pmod->m_pPatternSelectStrip[kb]);
+            addChild(m_pPatternSelectStrip[kb]);
 
             x2 = x + 9;
             y2 = y + 4;
@@ -498,10 +500,10 @@ struct Seq_Triad2_Widget : ModuleWidget
         }
 
         // trig mute
-        pmod->m_pButtonTrigMute =
+        m_pButtonTrigMute =
             new MyLEDButton(x + 310, 3, 15, 15, 13.0, DWRGB(180, 180, 180), DWRGB(255, 0, 0),
                             MyLEDButton::TYPE_SWITCH, 0, module, Seq_Triad2_TrigMute);
-        addChild(pmod->m_pButtonTrigMute);
+        addChild(m_pButtonTrigMute);
 
         addInput(
             createInput<MyPortInSmall>(Vec(x + 285, 1), module, Seq_Triad2::IN_GLOBAL_TRIG_MUTE));
@@ -520,7 +522,6 @@ struct Seq_Triad2_Widget : ModuleWidget
         if (module)
         {
             module->m_bInitialized = true;
-            module->onReset();
         }
     }
 
@@ -552,6 +553,44 @@ struct Seq_Triad2_Widget : ModuleWidget
         pMergeItem3->menumod = mod;
         menu->addChild(pMergeItem3);
     }
+
+    void step() override
+    {
+        auto az = dynamic_cast<Seq_Triad2 *>(module);
+        if (az)
+        {
+            m_pButtonTrigMute->Set(az->m_bTrigMute);
+            for (int kb = 0; kb < nKEYBOARDS; ++kb)
+            {
+                m_pButtonPause[kb]->Set(az->m_bPause[kb]);
+                m_pButtonOctaveSelect[kb]->Set(kb, az->m_Octave[kb] == kb);
+                m_pButtonChTrigMute[kb]->Set(az->m_bChTrigMute[kb]);
+                if (az->m_bResetKeyboard[kb])
+                {
+                    pKeyboardWidget[kb]->setkey(
+                        &az->m_Notes[kb][az->m_CurrentPattern[kb]][az->m_CurrentStep[kb]].note);
+                    az->m_bResetKeyboard[kb] = false;
+                }
+
+                auto index = az->m_CurrentPattern[kb];
+                m_pPatternSelectStrip[kb]->SetPat(index, false);
+                m_pPatternSelectStrip[kb]->SetMax(az->m_MaxPat[kb]);
+                m_pStepSelectStrip[kb]->SetMax(az->m_nMaxSteps[kb][index]);
+                m_pButtonTrig[kb]->Set(
+                    az->m_Notes[kb][az->m_CurrentPattern[kb]][az->m_CurrentStep[kb]].bTrigOff);
+
+                // change octave light
+                m_pButtonOctaveSelect[kb]->Set(az->m_Octave[kb], true);
+                m_pButtonCopy[kb]->Set(az->m_bCopyState[kb]);
+
+                if (az->m_iPendingPattern[kb] >= 0)
+                {
+                    m_pPatternSelectStrip[kb]->SetPat(az->m_iPendingPattern[kb], true);
+                }
+            }
+        }
+        Widget::step();
+    }
 };
 
 //-----------------------------------------------------
@@ -566,7 +605,7 @@ void Seq_Triad2::onReset()
     // lg.f("Reset\n");
 
     for (int kb = 0; kb < nKEYBOARDS; kb++)
-        m_pButtonOctaveSelect[kb]->Set(0, true);
+        m_Octave[kb] = 0;
 
     memset(m_fCvStartOut, 0, sizeof(m_fCvStartOut));
     memset(m_fCvEndOut, 0, sizeof(m_fCvEndOut));
@@ -594,7 +633,7 @@ void Seq_Triad2::onRandomize()
     int kb, step, pat, basekey, note;
 
     for (int kb = 0; kb < nKEYBOARDS; kb++)
-        m_pButtonOctaveSelect[kb]->Set(0, true);
+        m_Octave[kb] = 0;
 
     memset(m_fCvStartOut, 0, sizeof(m_fCvStartOut));
     memset(m_fCvEndOut, 0, sizeof(m_fCvEndOut));
@@ -657,13 +696,15 @@ void Seq_Triad2::Copy(int kb, bool bOn)
     if (kb < 0 || kb >= nKEYBOARDS)
         return;
 
+    m_bCopyState[kb] = bOn;
+
     if (!m_bPause[kb] || !bOn || m_CopySrc != NO_COPY)
     {
         if (m_CopySrc != NO_COPY)
-            m_pButtonCopy[m_CopySrc]->Set(false);
+            m_bCopyState[m_CopySrc] = false;
 
         m_CopySrc = NO_COPY;
-        m_pButtonCopy[kb]->Set(false);
+        m_bCopyState[kb] = false;
     }
     else if (bOn)
     {
@@ -727,10 +768,7 @@ void Seq_Triad2::SetOut(int kb)
 // Procedure:   SetKey
 //
 //-----------------------------------------------------
-void Seq_Triad2::SetKey(int kb)
-{
-    pKeyboardWidget[kb]->setkey(&m_Notes[kb][m_CurrentPattern[kb]][m_CurrentStep[kb]].note);
-}
+void Seq_Triad2::SetKey(int kb) { m_bResetKeyboard[kb] = true; }
 
 //-----------------------------------------------------
 // Procedure:   SetPendingPattern
@@ -750,8 +788,8 @@ void Seq_Triad2::SetPendingPattern(int kb, int phraseIn)
 
     m_PatternPending[kb].bPending = true;
     m_PatternPending[kb].phrase = phrase;
-    m_pPatternSelectStrip[kb]->SetPat(m_CurrentPattern[kb], false);
-    m_pPatternSelectStrip[kb]->SetPat(phrase, true);
+
+    m_iPendingPattern[kb] = phrase;
 }
 
 //-----------------------------------------------------
@@ -778,7 +816,7 @@ void Seq_Triad2::ChangePattern(int kb, int index, bool bForce)
         {
             memcpy(m_Notes[kb][index], m_Notes[m_CopySrc][m_CurrentPattern[m_CopySrc]],
                    sizeof(PATTERN_STRUCT) * nSTEPS);
-            m_pButtonCopy[m_CopySrc]->Set(false);
+            m_bCopyState[m_CopySrc] = false;
             m_nMaxSteps[kb][index] = m_nMaxSteps[m_CopySrc][m_CurrentPattern[m_CopySrc]];
             m_CopySrc = NO_COPY;
         }
@@ -786,17 +824,8 @@ void Seq_Triad2::ChangePattern(int kb, int index, bool bForce)
 
     m_CurrentPattern[kb] = index;
 
-    m_pPatternSelectStrip[kb]->SetPat(index, false);
-    m_pPatternSelectStrip[kb]->SetMax(m_MaxPat[kb]);
-    m_pStepSelectStrip[kb]->SetMax(m_nMaxSteps[kb][index]);
-
     // set keyboard key
     SetKey(kb);
-
-    m_pButtonTrig[kb]->Set(m_Notes[kb][m_CurrentPattern[kb]][m_CurrentStep[kb]].bTrigOff);
-
-    // change octave light
-    m_pButtonOctaveSelect[kb]->Set(m_Octave[kb], true);
 
     // set output note
     SetOut(kb);
@@ -824,15 +853,8 @@ void Seq_Triad2::ChangeStep(int kb, int index, bool bForce, bool bPlay)
 
     m_CurrentStep[kb] = index;
 
-    m_pStepSelectStrip[kb]->SetPat(index, false);
-
     // set keyboard key
     SetKey(kb);
-
-    m_pButtonTrig[kb]->Set(m_Notes[kb][m_CurrentPattern[kb]][m_CurrentStep[kb]].bTrigOff);
-
-    // change octave light
-    m_pButtonOctaveSelect[kb]->Set(m_Octave[kb], true);
 
     // set outputted note
     if (bPlay)
@@ -867,7 +889,7 @@ void Seq_Triad2::JsonParams(bool bTo, json_t *root)
     JsonDataInt(bTo, "m_Octave", root, &m_Octave[0], nKEYBOARDS);
     JsonDataInt(bTo, "m_CurrentPhrase", root, &m_CurrentPattern[0], nKEYBOARDS);
     JsonDataInt(bTo, "m_PatternNotes", root, (int *)&m_Notes[0][0][0],
-                nPATTERNS * nSTEPS * nKEYBOARDS * 8);
+                nPATTERNS * nSTEPS * nKEYBOARDS * 8); // 8 is sizeof struct / sizeof int
     JsonDataInt(bTo, "m_PhrasesUsed", root, &m_MaxPat[0], nKEYBOARDS);
     JsonDataInt(bTo, "m_CurrentPattern", root, &m_CurrentStep[0], nKEYBOARDS);
     JsonDataBool(bTo, "m_bTrigMute", root, &m_bTrigMute, 1);
@@ -919,26 +941,9 @@ void Seq_Triad2::dataFromJson(json_t *root)
 
     for (i = 0; i < nKEYBOARDS; i++)
     {
-        m_pPatternSelectStrip[i]->SetMax(m_MaxPat[i]);
-        m_pPatternSelectStrip[i]->SetPat(m_CurrentPattern[i], false);
-
-        m_pStepSelectStrip[i]->SetMax(m_nMaxSteps[i][m_CurrentPattern[i]]);
-        m_pStepSelectStrip[i]->SetPat(m_CurrentStep[i], false);
-
-        m_pButtonPause[i]->Set(m_bPause[i]);
-
         SetPatSteps(i, m_MaxPat[i]);
         ChangePattern(i, m_CurrentPattern[i], true);
         ChangeStep(i, m_CurrentStep[i], true, false);
-    }
-
-    if (m_bTrigMute)
-        m_pButtonTrigMute->Set(m_bTrigMute);
-
-    for (i = 0; i < nKEYBOARDS; i++)
-    {
-        if (m_bChTrigMute[i])
-            m_pButtonChTrigMute[i]->Set(m_bChTrigMute[i]);
     }
 }
 
@@ -962,12 +967,10 @@ void Seq_Triad2::process(const ProcessArgs &args)
         if (inputs[IN_GLOBAL_TRIG_MUTE].getVoltage() >= 0.00001)
         {
             m_bTrigMute = true;
-            m_pButtonTrigMute->Set(true);
         }
         else if (inputs[IN_GLOBAL_TRIG_MUTE].getVoltage() < 0.00001)
         {
             m_bTrigMute = false;
-            m_pButtonTrigMute->Set(false);
         }
     }
 
@@ -994,12 +997,10 @@ void Seq_Triad2::process(const ProcessArgs &args)
             if (inputs[IN_CHANNEL_TRIG_MUTE + kb].getVoltage() >= 0.00001)
             {
                 m_bChTrigMute[kb] = true;
-                m_pButtonChTrigMute[kb]->Set(true);
             }
             else if (inputs[IN_CHANNEL_TRIG_MUTE + kb].getVoltage() < 0.00001)
             {
                 m_bChTrigMute[kb] = false;
-                m_pButtonChTrigMute[kb]->Set(false);
             }
         }
 
