@@ -23,7 +23,7 @@ typedef struct
     bool bTrig;
 } ADR_STRUCT;
 
-typedef struct
+struct OSC_PARAM_STRUCT
 {
     int wavetype;
     int filtertype;
@@ -39,8 +39,7 @@ typedef struct
 
     // ads
     ADR_STRUCT adr_wave;
-
-} OSC_PARAM_STRUCT;
+};
 
 //-----------------------------------------------------
 // Module Definition
@@ -128,8 +127,6 @@ struct Osc_3Ch : Module
 
     int m_nWaves[nCHANNELS] = {};
 
-    MyLEDButtonStrip *m_pButtonWaveSelect[nCHANNELS] = {};
-
     // Contructor
     Osc_3Ch()
     {
@@ -165,7 +162,8 @@ struct Osc_3Ch : Module
 
         void onChange(const event::Change &e) override
         {
-            ParamQuantity *paramQuantity = getParamQuantity();
+            auto paramQuantity = getParamQuantity();
+
             mymodule = (Osc_3Ch *)paramQuantity->module;
 
             if (mymodule)
@@ -188,7 +186,8 @@ struct Osc_3Ch : Module
 
         void onChange(const event::Change &e) override
         {
-            ParamQuantity *paramQuantity = getParamQuantity();
+            auto paramQuantity = getParamQuantity();
+
             mymodule = (Osc_3Ch *)paramQuantity->module;
 
             if (mymodule)
@@ -213,7 +212,8 @@ struct Osc_3Ch : Module
 
         void onChange(const event::Change &e) override
         {
-            ParamQuantity *paramQuantity = getParamQuantity();
+            auto paramQuantity = getParamQuantity();
+
             mymodule = (Osc_3Ch *)paramQuantity->module;
 
             if (mymodule)
@@ -246,9 +246,6 @@ struct Osc_3Ch : Module
     void GetAudio(int ch, float *pOutL, float *pOutR, float flevel);
 };
 
-// dumb
-Osc_3Ch g_pOsc_3Ch_Browser;
-
 //-----------------------------------------------------
 // Osc_3Ch_WaveSelect
 //-----------------------------------------------------
@@ -270,18 +267,12 @@ void Osc_3Ch_WaveSelect(void *pClass, int id, int nbutton, bool bOn)
 
 struct Osc_3Ch_Widget : ModuleWidget
 {
+    MyLEDButtonStrip *m_pButtonWaveSelect[nCHANNELS]{};
 
     Osc_3Ch_Widget(Osc_3Ch *module)
     {
         int ch, x, y, x2, y2;
-        Osc_3Ch *pmod;
-
         setModule(module);
-
-        if (!module)
-            pmod = &g_pOsc_3Ch_Browser;
-        else
-            pmod = module;
 
         // box.size = Vec( 15*21, 380);
         setPanel(APP->window->loadSvg(asset::plugin(thePlugin, "res/OSC3Channel.svg")));
@@ -305,10 +296,10 @@ struct Osc_3Ch_Widget : ModuleWidget
             x2 = x + 32;
             y2 = y + 52;
 
-            pmod->m_pButtonWaveSelect[ch] = new MyLEDButtonStrip(
+            m_pButtonWaveSelect[ch] = new MyLEDButtonStrip(
                 x2, y2, 11, 11, 5, 8.0, 5, false, DWRGB(180, 180, 180), DWRGB(255, 255, 0),
                 MyLEDButtonStrip::TYPE_EXCLUSIVE, ch, module, Osc_3Ch_WaveSelect);
-            addChild(pmod->m_pButtonWaveSelect[ch]);
+            addChild(m_pButtonWaveSelect[ch]);
 
             x2 = x + 24;
             y2 = y + 18;
@@ -374,6 +365,17 @@ struct Osc_3Ch_Widget : ModuleWidget
             module->BuildWaves();
             module->SetWaveLights();
         }
+    }
+
+    void step() override
+    {
+        auto omod = dynamic_cast<Osc_3Ch *>(module);
+        if (omod)
+        {
+            for (auto ch = 0; ch < nCHANNELS; ch++)
+                m_pButtonWaveSelect[ch]->Set(omod->m_Wave[ch].wavetype, true);
+        }
+        Widget::step();
     }
 };
 
@@ -469,9 +471,6 @@ void Osc_3Ch::SetWaveLights(void)
 
     if (!m_bInitialized)
         return;
-
-    for (ch = 0; ch < nCHANNELS; ch++)
-        m_pButtonWaveSelect[ch]->Set(m_Wave[ch].wavetype, true);
 }
 
 //-----------------------------------------------------

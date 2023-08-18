@@ -70,7 +70,7 @@
 
     {
       "slug": "Osc_3Ch_Widget",
-      "name": "*REPORT* OSC 3 Channel",
+      "name": "OSC 3 Channel",
       "description": "3 Channel Synth",
       "tags": [
         "Synth voice"
