@@ -44,7 +44,7 @@
 
     {
       "slug": "TriadSeq2",
-      "name": "(Untested) Triad 2 Sequencer",
+      "name": "Triad 2 Sequencer",
       "description": "3 Channel Keyboard Sequencer",
       "tags": [
         "Sequencer"
