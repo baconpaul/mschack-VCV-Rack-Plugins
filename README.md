@@ -1,4 +1,9 @@
-# mscHack Plugins for VCV Rack 1.1.0
+# mscHack Plugins for VCV Rack 2.0.0 Maybe
+
+This is a fork / fix of mscRack 1.1.0 by pgatt and baconpaul
+trying to bring these back. We may abandon the project. Please
+check pgatt's post on community for more.
+
 
 ![screenshot](modules.PNG)
 
