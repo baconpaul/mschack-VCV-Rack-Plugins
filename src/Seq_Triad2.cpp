@@ -139,6 +139,21 @@ struct Seq_Triad2 : Module
             for (int pat = 0; pat < nPATTERNS; pat++)
                 m_nMaxSteps[kb][pat] = nSTEPS - 1;
         }
+
+        for (int i = 0; i < nKEYBOARDS; ++i)
+        {
+            auto s = std::to_string(i + 1);
+            configInput(IN_STEP_CLK + i, "Step Clock " + s);
+            configInput(IN_VOCT_OFF + i, "V/Oct Offset " + s);
+            configInput(IN_PAT_CHANGE + i, "Pattern Change " + s);
+            configInput(IN_CHANNEL_TRIG_MUTE + i, "Trigger Mute " + s);
+
+            configOutput(OUT_TRIG + i, "Trigger " + s);
+            configOutput(OUT_VOCTS + i, "V/Oct " + s);
+        }
+        configInput(IN_CLOCK_RESET, "Clock Reset");
+        configInput(IN_GLOBAL_PAT_CHANGE, "Global Pattern Change");
+        configInput(IN_GLOBAL_TRIG_MUTE, "Global Trigger Mute");
     }
 
     // Overrides

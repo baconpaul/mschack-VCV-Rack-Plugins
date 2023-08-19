@@ -52,6 +52,18 @@ struct SEQ_Envelope_8 : Module
         config(nPARAMS, nINPUTS, nOUTPUTS, nLIGHTS);
 
         configParam(PARAM_BAND, 0.0, 0.8, 0.333, "Rubber Band Edit");
+
+        configInput(INPUT_CLK_RESET, "Clock Reset");
+        configInput(INPUT_CLK, "Clock");
+        configInput(INPUT_GLOBAL_TRIG, "Glboal Trigger");
+
+        for (int i = 0; i < nCHANNELS; ++i)
+        {
+            auto s = std::to_string(i + 1);
+            configInput(INPUT_CH_HOLD + i, "Hold " + s);
+            configInput(INPUT_CH_TRIG + i, "Trigger " + s);
+            configOutput(OUTPUT_CV + i, "Envelope Output " + s);
+        }
     }
 
     // clock

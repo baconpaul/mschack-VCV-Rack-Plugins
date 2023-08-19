@@ -110,9 +110,16 @@ struct SynthDrums : Module
 
         for (int i = 0; i < nCHANNELS; i++)
         {
-            configParam(PARAM_FREQ + i, 0.0, 1.0, 0.0, "Pitch");
-            configParam(PARAM_ATT + i, 0.0, 1.0, 0.0, "Attack");
-            configParam(PARAM_REL + i, 0.0, 1.0, 0.0, "Release");
+            auto n = std::to_string(i + 1);
+            configParam(PARAM_FREQ + i, 0.0, 1.0, 0.0, "Pitch " + n);
+            configParam(PARAM_ATT + i, 0.0, 1.0, 0.0, "Attack " + n);
+            configParam(PARAM_REL + i, 0.0, 1.0, 0.0, "Release " + n);
+
+            configInput(IN_LEVEL + i, "Level " + n);
+            configInput(IN_TRIG + i, "Trigger " + n);
+            configInput(IN_FREQ_MOD + i, "Frequency Mod " + n);
+
+            configOutput(OUTPUT_AUDIO + i, "Output " + n);
         }
     }
 

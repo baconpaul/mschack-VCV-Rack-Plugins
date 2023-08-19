@@ -150,6 +150,38 @@ struct Mixer_ : Module
                 snprintf(strVal, 30, "%s%d. AUX 4 Level", strType, pos);
                 configParam(PARAM_CHAUX + (i * 4) + 3, 0.0, 1.0, 0.0, strVal);
             }
+
+            snprintf(strVal, 30, "%s%d", strType, pos);
+            auto s = std::string(strVal);
+            configInput(IN_LEFT + i, s + " Left");
+            configInput(IN_RIGHT + i, s + " Right");
+
+            if (i < nINCHANNELS)
+            {
+                configInput(IN_LEVELCV + i, s + " Level CV");
+                configInput(IN_PANCV + i, s + " Pan CV");
+            }
+        }
+
+#if nGROUPS > 0
+        configInput(IN_FADEX, "FadeX");
+        configInput(IN_FADEY, "FadeY");
+#endif
+        configOutput(OUT_MAINL, "Main Left");
+        configOutput(OUT_MAINR, "Main Right");
+
+#if nGROUPS > 0
+        for (int i = 0; i < nGROUPS; ++i)
+        {
+            configOutput(OUT_GRPL + i, "Group " + std::to_string(i + 1) + " Left");
+            configOutput(OUT_GRPR + i, "Group " + std::to_string(i + 1) + " Right");
+        }
+#endif
+
+        for (int i = 0; i < nAUX; ++i)
+        {
+            configOutput(OUT_AUXL + i, "Aux " + std::to_string(i + 1) + " Left");
+            configOutput(OUT_AUXR + i, "Aux " + std::to_string(i + 1) + " Right");
         }
 
         configParam(PARAM_AUXLVL + 0, 0.0, 1.0, 0.0, "AUX1 Send Level");

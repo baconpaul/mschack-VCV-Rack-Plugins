@@ -90,6 +90,25 @@ struct MasterClockx4 : Module
         }
 
         configParam(PARAM_HUMANIZE, 0.0f, 1.0f, 0.0f, "Humanize clock");
+
+        configInput(INPUT_CHAIN, "Chain");
+        for (int i = 0; i < nCHANNELS; ++i)
+        {
+            auto s = std::to_string(i + 1);
+            configInput(INPUT_EXT_SYNC + i, "Sync " + s);
+        }
+
+        for (int i = 0; i < nCHANNELS; ++i)
+        {
+            auto s = std::to_string(i + 1);
+            for (int c = 0; c < 4; ++c)
+            {
+                auto cs = " Copy " + std::to_string(c + 1);
+                configOutput(OUTPUT_CLK + (i * 4) + c, "Clock " + s + cs);
+                configOutput(OUTPUT_TRIG + (i * 4) + c, "Trig " + s + cs);
+            }
+        }
+        configOutput(OUTPUT_CHAIN, "Chain");
     }
 
     //-----------------------------------------------------

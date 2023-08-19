@@ -77,6 +77,14 @@ struct ASAF8 : Module
         {
             configParam(PARAM_SPEED_IN + i, 0.05f, 40.0f, 5.0f, "Fade In Speed");
             configParam(PARAM_SPEED_OUT + i, 0.05f, 40.0f, 5.0f, "Fade Out Speed");
+
+            auto s = std::to_string(i + 1);
+            configInput(IN_TRIGS + i, "Gate " + s);
+            configInput(IN_AUDIOL + i, "Left " + s);
+            configInput(IN_AUDIOR + i, "Right " + s);
+
+            configOutput(OUT_AUDIOL + i, "Left " + s);
+            configOutput(OUT_AUDIOR + i, "Right " + s);
         }
     }
 

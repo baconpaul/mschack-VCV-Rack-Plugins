@@ -117,14 +117,14 @@ struct SEQ_6x32x16 : Module
         configInput(IN_GLOBAL_PAT_CHANGE, "Global Pattern Change");
         configInput(IN_GLOBAL_TRIG_MUTE, "Global Trigger Mute");
 
-        for (int i=0; i<nCHANNELS; ++i)
+        for (int i = 0; i < nCHANNELS; ++i)
         {
-            configInput(IN_CLK + i, "Clock " + std::to_string(i+1));
-            configInput(IN_PAT_TRIG + i, "Trigger Pattern " + std::to_string(i+1));
+            configInput(IN_CLK + i, "Clock " + std::to_string(i + 1));
+            configInput(IN_PAT_TRIG + i, "Trigger Pattern " + std::to_string(i + 1));
 
-            configOutput(OUT_TRIG+i, "Trigger " + std::to_string(i+1));
-            configOutput(OUT_LEVEL+i, "CV " + std::to_string(i+1));
-            configOutput(OUT_BEAT1+i, "Pattern Start " + std::to_string(i+1));
+            configOutput(OUT_TRIG + i, "Trigger " + std::to_string(i + 1));
+            configOutput(OUT_LEVEL + i, "CV " + std::to_string(i + 1));
+            configOutput(OUT_BEAT1 + i, "Pattern Start " + std::to_string(i + 1));
         }
 
         memset(m_bPauseState, 0, sizeof(m_bPauseState));

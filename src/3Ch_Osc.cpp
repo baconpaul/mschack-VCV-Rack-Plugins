@@ -145,10 +145,21 @@ struct Osc_3Ch : Module
             configParam(PARAM_RES + i, 0.0f, 1.0f, 0.0f, "Filter Resonance");
 
             configParam(PARAM_OUTLVL + i, 0.0f, 1.0f, 0.0f, "Output Level");
-            configParam(PARAM_FILTER_MODE + i, 0.0f, 4.0f, 0.0f, "Filter Type");
+            configSwitch(PARAM_FILTER_MODE + i, 0.0f, 4.0f, 0.0f, "Filter Type",
+                         {"Off", "Low Pass", "High Pass", "Band Pass", "Notch"});
             configParam(PARAM_nWAVES + i, 0.0f, 6.0f, 0.0f, "Number of Waves");
             configParam(PARAM_SPREAD + i, 0.0f, 1.0f, 0.0f, "Stereo Spread");
             configParam(PARAM_DETUNE + i, 0.0f, 0.05f, 0.0f, "Detune");
+
+            auto s = std::to_string(i + 1);
+            configInput(IN_VOCT + i, "V/Oct " + s);
+            configInput(IN_TRIG + i, "Trigger " + s);
+            configInput(IN_FILTER + i, "Cutoff " + s);
+            configInput(IN_REZ + i, "Resonance " + s);
+            configInput(IN_LEVEL + i, "Level " + s);
+
+            configOutput(OUTPUT_AUDIO + i * 2, "Left " + s);
+            configOutput(OUTPUT_AUDIO + i * 2 + 1, "Right " + s);
         }
     }
 
