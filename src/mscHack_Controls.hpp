@@ -928,6 +928,70 @@ struct MyLEDButtonStrip : OpaqueWidget
         }
     }
 
+    void drawLayer(const DrawArgs &args, int layer) override
+    {
+        if (layer == 1)
+        {
+            float xi, yi;
+            int i;
+            char alpha = 0xFF;
+
+            if (!m_bInitialized)
+                return;
+
+            for (i = 0; i < m_nButtons; i++)
+            {
+                if (m_Type == TYPE_EXCLUSIVE_WOFF)
+                {
+                    if (i == (m_ExclusiveOn - 1))
+                    {
+                        nvgFillColor(args.vg, nvgRGBA(m_LEDColour[i].Col[2], m_LEDColour[i].Col[1],
+                                                      m_LEDColour[i].Col[0], alpha));
+                    }
+                    else
+                    {
+                        continue;
+                    }
+                }
+                else if (m_Type == TYPE_EXCLUSIVE)
+                {
+                    if (i == m_ExclusiveOn)
+                    {
+                        nvgFillColor(args.vg, nvgRGBA(m_LEDColour[i].Col[2], m_LEDColour[i].Col[1],
+                                                      m_LEDColour[i].Col[0], alpha));
+                    }
+                    else
+                    {
+                        continue;
+                    }
+                }
+                else
+                {
+                    if (m_bOn[i])
+                    {
+                        nvgFillColor(args.vg, nvgRGBA(m_LEDColour[i].Col[2], m_LEDColour[i].Col[1],
+                                                      m_LEDColour[i].Col[0], alpha));
+                    }
+                    else
+                    {
+                        continue;
+                    }
+                }
+
+                xi = (((float)m_Rect[i].x2 + (float)m_Rect[i].x) / 2.0f) - m_fLEDsize_d2;
+                yi = (((float)m_Rect[i].y2 + (float)m_Rect[i].y) / 2.0f) - m_fLEDsize_d2;
+
+                nvgBeginPath(args.vg);
+                nvgMoveTo(args.vg, xi, yi);
+                nvgLineTo(args.vg, xi + m_fLEDsize, yi);
+                nvgLineTo(args.vg, xi + m_fLEDsize, yi + m_fLEDsize);
+                nvgLineTo(args.vg, xi, yi + m_fLEDsize);
+                nvgClosePath(args.vg);
+                nvgFill(args.vg);
+            }
+        }
+    }
+
     //-----------------------------------------------------
     // Procedure:   isPoint
     //-----------------------------------------------------
@@ -1071,8 +1135,26 @@ struct MyLEDButton : OpaqueWidget
             nvgFillColor(args.vg,
                          nvgRGB(m_LEDColour.Col[2], m_LEDColour.Col[1], m_LEDColour.Col[0]));
 
-        xi = (((float)m_Rect.x2 + (float)m_Rect.x) / 2.0f) - m_fLEDsize_d2;
-        yi = (((float)m_Rect.y2 + (float)m_Rect.y) / 2.0f) - m_fLEDsize_d2;
+        drawFill(args);
+    }
+
+    void drawLayer(const DrawArgs &args, int layer) override
+    {
+        if (layer == 1)
+        {
+            if (m_bOn)
+            {
+                nvgFillColor(args.vg,
+                             nvgRGB(m_LEDColour.Col[2], m_LEDColour.Col[1], m_LEDColour.Col[0]));
+                drawFill(args);
+            }
+        }
+    }
+
+    void drawFill(const DrawArgs &args)
+    {
+        auto xi = (((float)m_Rect.x2 + (float)m_Rect.x) / 2.0f) - m_fLEDsize_d2;
+        auto yi = (((float)m_Rect.y2 + (float)m_Rect.y) / 2.0f) - m_fLEDsize_d2;
 
         nvgBeginPath(args.vg);
         nvgRoundedRect(args.vg, xi, yi, m_fLEDsize, m_fLEDsize, 2.5);
@@ -1585,6 +1667,55 @@ struct PatternSelectStrip : OpaqueWidget
         }
     }
 
+    void drawLayer(const DrawArgs &args, int layer) override
+    {
+        if (layer == 1)
+        {
+            float xi, yi;
+            for (auto i = 0; i <= m_MaxPat; i++)
+            {
+                nvgFillColor(args.vg,
+                             nvgRGB(m_MaxCol[1].Col[2], m_MaxCol[1].Col[1], m_MaxCol[1].Col[0]));
+
+                nvgBeginPath(args.vg);
+                xi = (((float)m_RectsPatSel[i].x2 + (float)m_RectsPatSel[i].x) / 2.0f);
+                nvgMoveTo(args.vg, m_RectsMaxPat[i].x, m_RectsMaxPat[i].y);
+                nvgLineTo(args.vg, m_RectsMaxPat[i].x2, m_RectsMaxPat[i].y);
+                nvgLineTo(args.vg, xi, m_RectsMaxPat[i].y2);
+                nvgClosePath(args.vg);
+                nvgFill(args.vg);
+
+                if (m_PatSel != i)
+                    continue;
+
+                nvgFillColor(args.vg,
+                             nvgRGB(m_PatCol[1].Col[2], m_PatCol[1].Col[1], m_PatCol[1].Col[0]));
+
+                nvgBeginPath(args.vg);
+                nvgMoveTo(args.vg, m_RectsPatSel[i].x, m_RectsPatSel[i].y);
+                nvgLineTo(args.vg, m_RectsPatSel[i].x2, m_RectsPatSel[i].y);
+                nvgLineTo(args.vg, m_RectsPatSel[i].x2, m_RectsPatSel[i].y2);
+                nvgLineTo(args.vg, m_RectsPatSel[i].x, m_RectsPatSel[i].y2);
+                nvgClosePath(args.vg);
+                nvgFill(args.vg);
+
+                if (m_PatPending == i)
+                {
+                    nvgFillColor(args.vg, nvgRGBA(m_PatCol[1].Col[2], m_PatCol[1].Col[1],
+                                                  m_PatCol[1].Col[0], 0x50));
+
+                    nvgBeginPath(args.vg);
+                    nvgMoveTo(args.vg, m_RectsPatSel[i].x, m_RectsPatSel[i].y);
+                    nvgLineTo(args.vg, m_RectsPatSel[i].x2, m_RectsPatSel[i].y);
+                    nvgLineTo(args.vg, m_RectsPatSel[i].x2, m_RectsPatSel[i].y2);
+                    nvgLineTo(args.vg, m_RectsPatSel[i].x, m_RectsPatSel[i].y2);
+                    nvgClosePath(args.vg);
+                    nvgFill(args.vg);
+                }
+            }
+        }
+    }
+
     //-----------------------------------------------------
     // Procedure:   isPoint
     //-----------------------------------------------------
@@ -1875,6 +2006,29 @@ struct LEDMeterWidget : TransparentWidget
             nvgLineTo(args.vg, m_Rects[i].x, m_Rects[i].y2);
             nvgClosePath(args.vg);
             nvgFill(args.vg);
+        }
+    }
+
+    void drawLayer(const DrawArgs &args, int layer) override
+    {
+        if (layer == 1)
+        {
+            for (auto i = 0; i < nDISPLAY_LEDS; i++)
+            {
+                if (m_bOn[i])
+                    nvgFillColor(args.vg, nvgRGB(m_ColoursOn[i].Col[2], m_ColoursOn[i].Col[1],
+                                                 m_ColoursOn[i].Col[0]));
+                else
+                    continue;
+
+                nvgBeginPath(args.vg);
+                nvgMoveTo(args.vg, m_Rects[i].x, m_Rects[i].y);
+                nvgLineTo(args.vg, m_Rects[i].x2, m_Rects[i].y);
+                nvgLineTo(args.vg, m_Rects[i].x2, m_Rects[i].y2);
+                nvgLineTo(args.vg, m_Rects[i].x, m_Rects[i].y2);
+                nvgClosePath(args.vg);
+                nvgFill(args.vg);
+            }
         }
     }
 
