@@ -52,6 +52,15 @@ struct OSC_WaveMorph_3 : Module
         configParam(PARAM_CUTOFF, 0.0, 0.1, 0.0, "Filter Cutoff");
         configParam(PARAM_RES, 0.0, 1.0, 0.0, "Filter Resonance");
         configParam(PARAM_FILTER_MODE, 0.0, 4.0, 0.0, "Filter Mode");
+
+        configInput(INPUT_VOCT, "V/Oct");
+        configInput(INPUT_MORPHCV, "Morph CV");
+        configInput(IN_FILTER, "Filter Modulation");
+        configInput(IN_REZ, "Resonance Modulation");
+        configInput(IN_LEVEL, "Level Modulation");
+        configInput(IN_WAVE_CHANGE, "Wave Chage");
+
+        configOutput(OUTPUT_AUDIO, "Audio");
     }
 
     int m_CurrentChannel = 0;

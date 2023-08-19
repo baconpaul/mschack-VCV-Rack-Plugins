@@ -132,6 +132,13 @@ struct ARP700 : Module
         config(nPARAMS, nINPUTS, nOUTPUTS);
         m_Clock.fsynclen = 2.0 * 48.0; // default to 120bpm
         m_Clock.IgnoreClockCount = 2;
+
+        configInput(IN_CLOCK_TRIG, "Clock");
+        configInput(IN_VOCT_OFF, "V/Oct Offset");
+        configInput(IN_PROG_CHANGE, "Program Change");
+        configInput(IN_CLOCK_RESET, "Clock Reset");
+        configOutput(OUT_TRIG, "Trigger");
+        configOutput(OUT_VOCTS, "V/Oct");
     }
 
     // pattern

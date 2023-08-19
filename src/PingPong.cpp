@@ -101,6 +101,7 @@ struct PingPong : Module
         configParam(PARAM_MIX, 0.0f, 1.0f, 0.0f, "Wet/Dry Mix");
         configSwitch(PARAM_FILTER_MODE, 0.0, 4.0, 0.0, "Filter Type",
                      {"Off", "LowPass", "HighPass", "BandPass", "Notch"});
+        configParam(PARAM_REVERSE, 0, 1, 0, "Unused");
 
         configInput(INPUT_L, "Left");
         configInput(INPUT_R, "Right");
