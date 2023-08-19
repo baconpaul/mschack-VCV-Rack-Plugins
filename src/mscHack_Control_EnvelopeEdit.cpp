@@ -8,6 +8,9 @@ Widget_EnvelopeEdit::Widget_EnvelopeEdit(int x, int y, int w, int h, int handleS
 {
     int ch, hd;
 
+    box.pos = Vec(x, y);
+    box.size = Vec(w, h);
+
     if (!pClass || !pCallback)
         return;
 
@@ -15,9 +18,6 @@ Widget_EnvelopeEdit::Widget_EnvelopeEdit(int x, int y, int w, int h, int handleS
     m_pCallback = pCallback;
     m_handleSize = handleSize;
     m_MaxChannels = nchannels;
-
-    box.pos = Vec(x, y);
-    box.size = Vec(w, h);
 
     // calc division size (16 divisions, 4 beats x 4 quarter)
     m_divw = (((float)w - (float)ENVELOPE_HANDLES) / (float)ENVELOPE_DIVISIONS) + 1.0f;
@@ -248,9 +248,6 @@ void Widget_EnvelopeEdit::draw(const DrawArgs &args)
     float x, y, divsize;
     float linewidth = 1.0;
 
-    if (!m_bInitialized)
-        return;
-
     // fill bg
     nvgBeginPath(args.vg);
     nvgRect(args.vg, 0, 0, box.size.x - 1, box.size.y - 1);
@@ -282,6 +279,9 @@ void Widget_EnvelopeEdit::draw(const DrawArgs &args)
     }
 
     y = 0.0;
+
+    if (!m_bInitialized)
+        return;
 
     hlines = hdivs[m_EnvData[m_currentChannel].m_Range];
 

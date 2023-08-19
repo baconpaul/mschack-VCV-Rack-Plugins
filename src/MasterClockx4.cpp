@@ -244,7 +244,7 @@ struct MasterClockx4_Widget : ModuleWidget
     MasterClockx4_Widget(MasterClockx4 *module)
     {
         int ch, x, y;
-        MasterClockx4 *pmod{module};
+        PModTempInstance<MasterClockx4> pmod{module};
 
         // box.size = Vec( 15*18, 380);
         setModule(module);
@@ -255,9 +255,6 @@ struct MasterClockx4_Widget : ModuleWidget
         addChild(createWidget<ScrewSilver>(Vec(box.size.x - 30, 0)));
         addChild(createWidget<ScrewSilver>(Vec(15, 365)));
         addChild(createWidget<ScrewSilver>(Vec(box.size.x - 30, 365)));
-
-        if (!pmod)
-            return;
 
         // bpm knob
         pmod->m_pBpmKnob =

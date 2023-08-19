@@ -737,6 +737,14 @@ struct MyLED7DigitDisplay : TransparentWidget
             xi += m_fSpace;
         }
     }
+
+    void drawLayer(const DrawArgs &args, int level) override
+    {
+        if (level != 1)
+            return;
+
+        draw(args);
+    }
 };
 
 //-----------------------------------------------------
@@ -1117,8 +1125,6 @@ struct MyLEDButton : OpaqueWidget
     //-----------------------------------------------------
     void draw(const DrawArgs &args) override
     {
-        float xi, yi;
-
         if (!m_bInitialized)
             return;
 
@@ -2882,5 +2888,28 @@ struct Knob_Yellow3_20_Snap : RoundKnob
         snap = true;
         setSvg(APP->window->loadSvg(asset::plugin(thePlugin, "res/mschack_Knob_Yellow3_20.svg")));
         // setSVG(SVG::load(asset::plugin(thePlugin, "res/mschack_Knob_Yellow3_20.svg" )));
+    }
+};
+
+/**
+ * This struct is used to hold a pointer to the module and respond to -> in the
+ * widget construction stage for 'impure' port widgets. It also has a local dummy.
+ * That local dummy would have the lifetime of the constructor but that's OK, since
+ * the widgets shoudl all deal with null modules and the only thing we are doing
+ * is stashing references which are GCed by the addChild
+ *
+ * @tparam T
+ */
+template <typename T> struct PModTempInstance
+{
+    T dummy;
+    T *real{nullptr};
+    PModTempInstance(T *t) : real(t) {}
+
+    T *operator->()
+    {
+        if (real)
+            return real;
+        return &dummy;
     }
 };

@@ -306,7 +306,7 @@ struct SEQ_6x32x16_Widget : ModuleWidget
     {
         int x, y, x2, y2;
         ParamWidget *pWidget = NULL;
-        SEQ_6x32x16 *pmod{module};
+        PModTempInstance<SEQ_6x32x16> pmod{module};
 
         setModule(module);
 
@@ -317,9 +317,6 @@ struct SEQ_6x32x16_Widget : ModuleWidget
         addChild(createWidget<ScrewSilver>(Vec(box.size.x - 30, 0)));
         addChild(createWidget<ScrewSilver>(Vec(15, 365)));
         addChild(createWidget<ScrewSilver>(Vec(box.size.x - 30, 365)));
-
-        if (!module)
-            return;
 
         x = 7;
         y = 22;

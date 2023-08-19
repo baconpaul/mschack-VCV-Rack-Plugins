@@ -349,7 +349,7 @@ struct ARP700_Widget : ModuleWidget
     ARP700_Widget(ARP700 *module)
     {
         int x, y, note, param;
-        ARP700 *pmod{module};
+        PModTempInstance<ARP700> pmod{module};
 
         // box.size = Vec( 15*27, 380);
 
@@ -362,9 +362,6 @@ struct ARP700_Widget : ModuleWidget
         addChild(createWidget<ScrewSilver>(Vec(box.size.x - 30, 0)));
         addChild(createWidget<ScrewSilver>(Vec(15, 365)));
         addChild(createWidget<ScrewSilver>(Vec(box.size.x - 30, 365)));
-
-        if (!pmod)
-            return;
 
         for (int i = 0; i < 37; i++)
             pmod->m_fKeyNotes[i] = (float)i * SEMI;

@@ -392,7 +392,7 @@ struct SEQ_Envelope_8_Widget : ModuleWidget
 
     SEQ_Envelope_8_Widget(SEQ_Envelope_8 *module)
     {
-        SEQ_Envelope_8 *pmod{module};
+        PModTempInstance<SEQ_Envelope_8> pmod{module};
         int ch, x = 0, y = 0;
 
         // box.size = Vec( 15*36, 380);
@@ -406,9 +406,6 @@ struct SEQ_Envelope_8_Widget : ModuleWidget
         addChild(createWidget<ScrewSilver>(Vec(box.size.x - 30, 0)));
         addChild(createWidget<ScrewSilver>(Vec(15, 365)));
         addChild(createWidget<ScrewSilver>(Vec(box.size.x - 30, 365)));
-
-        if (!pmod)
-            return;
 
         // input clock
         addInput(createInput<MyPortInSmall>(Vec(45, 18), module, SEQ_Envelope_8::INPUT_CLK));

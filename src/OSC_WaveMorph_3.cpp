@@ -247,7 +247,7 @@ struct OSC_WaveMorph_3_Widget : ModuleWidget
 
     OSC_WaveMorph_3_Widget(OSC_WaveMorph_3 *module)
     {
-        OSC_WaveMorph_3 *pmod{module};
+        PModTempInstance<OSC_WaveMorph_3> pmod{module};
 
         setModule(module);
 
@@ -264,9 +264,6 @@ struct OSC_WaveMorph_3_Widget : ModuleWidget
 
         // input morph cv
         addInput(createInput<MyPortInSmall>(Vec(14, 311), module, OSC_WaveMorph_3::INPUT_MORPHCV));
-
-        if (!pmod)
-            return;
 
         // invert
         pmod->m_pButtonInvert =
