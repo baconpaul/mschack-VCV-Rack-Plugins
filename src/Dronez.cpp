@@ -117,8 +117,6 @@ struct Dronez : Module
         FADE_IN,
     };
 
-    bool m_bInitialized = false;
-
     // Contructor
     Dronez()
     {
@@ -131,6 +129,8 @@ struct Dronez : Module
         configInput(IN_VOCT, "Drone v/oct Pitch");
         configOutput(OUT_L, "Left Drone");
         configOutput(OUT_R, "Right Drone");
+
+        BuildDrone();
     }
 
     std::string m_sLabel1, m_sLabel2;
@@ -309,11 +309,6 @@ struct Dronez_Widget : ModuleWidget
 
         addChild(createWidget<ScrewSilver>(Vec(30, 0)));
         addChild(createWidget<ScrewSilver>(Vec(30, 365)));
-
-        if (module)
-        {
-            module->BuildDrone();
-        }
     }
 
     void step() override
@@ -524,7 +519,7 @@ void Dronez::BuildWave(int ch)
 // Procedure:   BuildDrone
 //
 //-----------------------------------------------------
-void Dronez::BuildDrone(void)
+void Dronez::BuildDrone()
 {
     int i, ch;
 
@@ -556,8 +551,6 @@ void Dronez::BuildDrone(void)
         m_reverb.out[i] =
             (m_reverb.in - (int)(APP->engine->getSampleRate() * frand_mm(0.01f, .1f))) &
             REV_BUF_MAX;
-
-    m_bInitialized = true;
 }
 
 //-----------------------------------------------------
@@ -703,9 +696,6 @@ void Dronez::process(const ProcessArgs &args)
 {
     float out = 0.0f, In = 0.0f, outL = 0.0f, outR = 0.0f, fmorph[nCHANNELS], fcv = 0.0f;
     int ch, i, wv;
-
-    if (!m_bInitialized)
-        return;
 
     // randomize trigger
     if (m_SchmitTrigRand.process(inputs[IN_RANDTRIG].getNormalVoltage(0.0f)))

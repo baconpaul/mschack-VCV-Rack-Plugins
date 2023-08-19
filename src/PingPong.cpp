@@ -63,8 +63,6 @@ struct PingPong : Module
         FILTER_NT
     };
 
-    bool m_bInitialized = false;
-
     FILTER_PARAM_STRUCT m_Filter[2];
 
     float m_fCutoff = 0.0;
@@ -101,7 +99,18 @@ struct PingPong : Module
         configParam(PARAM_CUTOFF, 0.0f, 1.0f, 0.0f, "Filter Cutoff");
         configParam(PARAM_Q, 0.0f, 1.0f, 0.0f, "Filter Resonance");
         configParam(PARAM_MIX, 0.0f, 1.0f, 0.0f, "Wet/Dry Mix");
-        configParam(PARAM_FILTER_MODE, 0.0, 4.0, 0.0, "Filter Type");
+        configSwitch(PARAM_FILTER_MODE, 0.0, 4.0, 0.0, "Filter Type", {"Off", "LowPass", "HighPass", "BandPass", "Notch"});
+
+        configInput(INPUT_L, "Left");
+        configInput(INPUT_R, "Right");
+        configInput(INPUT_SYNC, "Clock Sync");
+        configInput(INPUT_GNIP_TOGGLE, "Trigger to Toggle Gnip Gnop");
+
+        configOutput(OUT_L, "Left");
+        configOutput(OUT_R, "Right");
+
+        configBypass(INPUT_L, OUT_L);
+        configBypass(INPUT_R, OUT_R);
     }
 
     // Overrides
@@ -222,9 +231,6 @@ struct PingPong_Widget : ModuleWidget
             new MyLEDButton(24, 343, 11, 11, 8.0, DWRGB(180, 180, 180), DWRGB(255, 255, 0),
                             MyLEDButton::TYPE_SWITCH, 0, module, PingPong_Reverse);
         addChild(m_pButtonReverse);
-
-        if (module)
-            module->m_bInitialized = true;
     }
 
     void step() override
@@ -247,9 +253,6 @@ struct PingPong_Widget : ModuleWidget
 //-----------------------------------------------------
 void PingPong::onReset()
 {
-    if (!m_bInitialized)
-        return;
-
     m_bReverseState = false;
 }
 
@@ -379,9 +382,6 @@ void PingPong::process(const ProcessArgs &args)
     float outL, outR, inL = 0.0, inR = 0.0, inOrigL = 0.0, inOrigR = 0.0, syncq = 0.0, mix;
     bool bMono = false;
     int i, dR, dL;
-
-    if (!m_bInitialized)
-        return;
 
     dL = params[PARAM_DELAYL].getValue() * MAC_DELAY_SECONDS * args.sampleRate;
     dR = params[PARAM_DELAYR].getValue() * MAC_DELAY_SECONDS * args.sampleRate;

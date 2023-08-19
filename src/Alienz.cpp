@@ -90,8 +90,6 @@ struct Alienz : Module
         FADE_IN,
     };
 
-    bool m_bInitialized = false;
-
     // Contructor
     Alienz()
     {
@@ -103,6 +101,8 @@ struct Alienz : Module
         configInput(IN_RANDTRIG, "Seed Randomization");
         configInput(IN_GATE, "Signal Activation Gate");
         configOutput(OUT, "Waveform");
+
+        BuildDrone();
     }
 
     // osc
@@ -275,11 +275,6 @@ struct Alienz_Widget : ModuleWidget
 
         addChild(createWidget<ScrewSilver>(Vec(30, 0)));
         addChild(createWidget<ScrewSilver>(Vec(30, 365)));
-
-        if (module)
-        {
-            module->BuildDrone();
-        }
     }
 
     void step() override
@@ -465,7 +460,7 @@ void Alienz::BuildWave(int ch)
 //
 //-----------------------------------------------------
 int bauds[4] = {2400, 4800, 9600, 19200};
-void Alienz::BuildDrone(void)
+void Alienz::BuildDrone()
 {
     int ch, i;
     int byte;
@@ -507,8 +502,6 @@ void Alienz::BuildDrone(void)
         m_osc2notes[i] = frand_mm(3.0f, 6.0f);
 
     m_osc2freq = APP->engine->getSampleRate() / frand_mm(60.0f, 90.0f);
-
-    m_bInitialized = true;
 }
 
 //-----------------------------------------------------
@@ -637,9 +630,6 @@ void Alienz::process(const ProcessArgs &args)
     float In = 0.0f, fout;
     int i, ch;
     static int bcount = 0, note = 0, fcount = 0;
-
-    if (!m_bInitialized)
-        return;
 
     // randomize trigger
     if (m_SchmitTrigRand.process(inputs[IN_RANDTRIG].getNormalVoltage(0.0f)))

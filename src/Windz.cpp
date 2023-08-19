@@ -76,8 +76,6 @@ struct Windz : Module
         FADE_IN,
     };
 
-    bool m_bInitialized = false;
-
     // Contructor
     Windz()
     {
@@ -89,6 +87,8 @@ struct Windz : Module
         configInput(IN_RANDTRIG, "Seed Randomization");
         configOutput(OUT_L, "Left Windz");
         configOutput(OUT_R, "Right Windz");
+
+        BuildDrone();
     }
 
     std::string m_sLabel1, m_sLabel2;
@@ -459,8 +459,6 @@ void Windz::BuildDrone(void)
     {
         BuildWave(ch);
     }
-
-    m_bInitialized = true;
 }
 
 //-----------------------------------------------------
@@ -588,9 +586,6 @@ void Windz::process(const ProcessArgs &args)
 {
     float In = 0.0f, fout[nCHANNELS] = {};
     int ch, i;
-
-    if (!m_bInitialized)
-        return;
 
     // randomize trigger
     if (m_SchmitTrigRand.process(inputs[IN_RANDTRIG].getNormalVoltage(0.0f)))

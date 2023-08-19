@@ -72,6 +72,16 @@ struct Compressor : Module
         configParam(PARAM_RELEASE, 0.0f, 1.0f, 0.0f, "Fade In Speed");
         configParam(PARAM_BYPASS, 0.0f, 1.0f, 0.0f, "Fade In Speed");
         configParam(PARAM_SIDE_CHAIN, 0.0f, 1.0f, 0.0f, "Fade In Speed");
+
+        configInput(IN_AUDIOL, "Left");
+        configInput(IN_AUDIOR, "Right");
+        configInput(IN_SIDE_CHAIN, "Side CHain");
+
+        configOutput(OUT_AUDIOL, "Left");
+        configOutput(OUT_AUDIOR, "Right");
+
+        configBypass(IN_AUDIOL, OUT_AUDIOL);
+        configBypass(IN_AUDIOR, OUT_AUDIOR);
     }
 
     typedef rack::dsp::RingBuffer<float, 8192 * 4> rbuf_t;

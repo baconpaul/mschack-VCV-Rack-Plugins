@@ -72,8 +72,6 @@ struct StepDelay : Module
         FILTER_NT
     };
 
-    bool m_bInitialized = false;
-
     // Contructor
     StepDelay()
     {
@@ -92,6 +90,21 @@ struct StepDelay : Module
         }
 
         configParam(PARAM_MIX, 0.0, 1.0, 0.5, "Wet/Dry Mix");
+
+        configInput(IN_CLOCK, "Clock");
+        configInput(IN_CLK_RESET, "Clock Reset");
+        configInput(IN_AUDIOL, "Left");
+        configInput(IN_AUDIOR, "Right");
+        configInput(IN_FILTER_MOD, "Filter Modulation");
+
+        configOutput(OUT_AUDIOL, "Left");
+        configOutput(OUT_AUDIOR, "Right");
+
+        configBypass(IN_AUDIOL, OUT_AUDIOL);
+        configBypass(IN_AUDIOR, OUT_AUDIOR);
+
+        m_Clock.fsynclen = 2.0 * 48.0; // default to 120bpm
+        CalcDelays();
     }
 
     // clock
@@ -242,13 +255,6 @@ struct StepDelay_Widget : ModuleWidget
             addChild(m_pButtonLenMod[steps]);
 
             x += 28;
-        }
-
-        if (module)
-        {
-            module->m_Clock.fsynclen = 2.0 * 48.0; // default to 120bpm
-            module->CalcDelays();
-            module->m_bInitialized = true;
         }
     }
 
@@ -424,9 +430,6 @@ void StepDelay::CalcDelays(void)
 {
     int i, delay, delaysum = 0;
 
-    if (!m_bInitialized)
-        return;
-
     for (i = 0; i < nSTEPS; i++)
     {
         delay = (int)params[PARAM_DELAY + i].getValue();
@@ -451,9 +454,6 @@ void StepDelay::process(const ProcessArgs &args)
     bool bMono = true;
     float delayL, delayR, fFbL = 0.0f, fFbR = 0.0f, inLOrig = 0.0f, inROrig = 0.0f, inL = 0.0f,
                           inR = 0.0f, outL = 0.0f, outR = 0.0f, inPan, mix;
-
-    if (!m_bInitialized)
-        return;
 
     // get audio inputs, Mono if L only
     if (inputs[IN_AUDIOR].isConnected())

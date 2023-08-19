@@ -46,7 +46,10 @@ struct SEQ_6x32x16 : Module
         nOUTPUTS = OUT_BEAT1 + nCHANNELS
     };
 
-    bool m_bInitialized = false;
+    inline bool areWidgetsAttached()
+    {
+        return m_pPatternDisplay[0] != nullptr;
+    }
 
     bool m_bPauseState[nCHANNELS] = {};
     bool m_bBiLevelState[nCHANNELS] = {};
@@ -111,6 +114,19 @@ struct SEQ_6x32x16 : Module
             configParam(PARAM_LVL3_KNOB + i, 0.0, 1.0, 0.50, "Level Med");
             configParam(PARAM_LVL4_KNOB + i, 0.0, 1.0, 0.75, "Level Med Hi");
             configParam(PARAM_LVL5_KNOB + i, 0.0, 1.0, 0.9, "Level Hi");
+        }
+
+        memset(m_bPauseState, 0, sizeof(m_bPauseState));
+        memset(m_bBiLevelState, 0, sizeof(m_bBiLevelState));
+        memset(m_Pattern, 0, sizeof(m_Pattern));
+        memset(m_CurrentProg, 0, sizeof(m_CurrentProg));
+
+        for (int ch = 0; ch < nCHANNELS; ch++)
+        {
+            for (int prog = 0; prog < nCHANNELS; prog++)
+                m_MaxPat[ch][prog] = nSTEPS - 1;
+
+            m_MaxProg[ch] = nPROG - 1;
         }
     }
 
@@ -224,7 +240,7 @@ void SEQ_6x32x16_PatternChangeCallback(void *pClass, int ch, int pat, int level,
 {
     SEQ_6x32x16 *mymodule = (SEQ_6x32x16 *)pClass;
 
-    if (!mymodule || !mymodule->m_bInitialized)
+    if (!mymodule || !mymodule->areWidgetsAttached())
         return;
 
     mymodule->m_MaxPat[ch][mymodule->m_CurrentProg[ch]] = maxpat;
@@ -239,7 +255,7 @@ void SEQ_6x32x16_ProgramChangeCallback(void *pClass, int ch, int pat, int max)
 {
     SEQ_6x32x16 *mymodule = (SEQ_6x32x16 *)pClass;
 
-    if (!mymodule || !mymodule->m_bInitialized)
+    if (!mymodule || !mymodule->areWidgetsAttached())
         return;
 
     if (mymodule->m_MaxProg[ch] != max)
@@ -424,7 +440,6 @@ struct SEQ_6x32x16_Widget : ModuleWidget
 
         if (module)
         {
-            module->m_bInitialized = true;
             module->doWidgetRefresh();
         }
     }
@@ -518,6 +533,11 @@ void SEQ_6x32x16::dataFromJson(json_t *root)
 
 void SEQ_6x32x16::doWidgetRefresh()
 {
+    if (!areWidgetsAttached())
+    {
+        // This should never happen
+        return;
+    }
     m_refreshWidgets = false;
     for (int ch = 0; ch < nCHANNELS; ch++)
     {
@@ -543,7 +563,7 @@ void SEQ_6x32x16::doWidgetRefresh()
 //-----------------------------------------------------
 void SEQ_6x32x16::onReset()
 {
-    if (!m_bInitialized)
+    if (!areWidgetsAttached())
         return;
 
     for (int ch = 0; ch < nCHANNELS; ch++)
@@ -722,7 +742,7 @@ void SEQ_6x32x16::process(const ProcessArgs &args)
                          bPatTrig[nCHANNELS] = {};
     float fout = 0.0;
 
-    if (!m_bInitialized)
+    if (!areWidgetsAttached())
         return;
 
     if (inputs[IN_GLOBAL_TRIG_MUTE].isConnected())
