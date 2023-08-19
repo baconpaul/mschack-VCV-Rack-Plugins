@@ -1459,6 +1459,71 @@ struct SinglePatternClocked32 : OpaqueWidget
         }
     }
 
+    void drawLayer(const DrawArgs &args, int layer) override
+    {
+        if (layer != 1)
+            return;
+
+        float xi, yi;
+        RGB_STRUCT rgb = {0};
+
+        for (auto i = 0; i <= m_MaxPat; i++)
+        {
+            nvgFillColor(args.vg,
+                         nvgRGB(m_MaxCol[1].Col[2], m_MaxCol[1].Col[1], m_MaxCol[1].Col[0]));
+
+            nvgBeginPath(args.vg);
+            xi = (((float)m_RectsPatSel[i].x2 + (float)m_RectsPatSel[i].x) / 2.0f);
+            nvgMoveTo(args.vg, m_RectsMaxPat[i].x, m_RectsMaxPat[i].y);
+            nvgLineTo(args.vg, m_RectsMaxPat[i].x2, m_RectsMaxPat[i].y);
+            nvgLineTo(args.vg, xi, m_RectsMaxPat[i].y2);
+            // nvgLineTo(args.vg, m_RectsMaxPat[ i ].x, m_RectsMaxPat[ i ].y2 );
+            nvgClosePath(args.vg);
+            nvgFill(args.vg);
+            // nvgStroke( args.vg );
+
+            // pattern select
+            rgb.Col[0] = ((m_PatCol[1].Col[0] * m_PatSelLevel[i]) +
+                          (m_PatCol[0].Col[0] * (LEVELS - m_PatSelLevel[i]))) /
+                         LEVELS;
+            rgb.Col[1] = ((m_PatCol[1].Col[1] * m_PatSelLevel[i]) +
+                          (m_PatCol[0].Col[1] * (LEVELS - m_PatSelLevel[i]))) /
+                         LEVELS;
+            rgb.Col[2] = ((m_PatCol[1].Col[2] * m_PatSelLevel[i]) +
+                          (m_PatCol[0].Col[2] * (LEVELS - m_PatSelLevel[i]))) /
+                         LEVELS;
+
+            nvgFillColor(args.vg, nvgRGB(rgb.Col[2], rgb.Col[1], rgb.Col[0]));
+
+            nvgBeginPath(args.vg);
+            nvgMoveTo(args.vg, m_RectsPatSel[i].x, m_RectsPatSel[i].y);
+            nvgLineTo(args.vg, m_RectsPatSel[i].x2, m_RectsPatSel[i].y);
+            nvgLineTo(args.vg, m_RectsPatSel[i].x2, m_RectsPatSel[i].y2);
+            nvgLineTo(args.vg, m_RectsPatSel[i].x, m_RectsPatSel[i].y2);
+            nvgClosePath(args.vg);
+            nvgFill(args.vg);
+            nvgStroke(args.vg);
+
+            xi = (((float)m_RectsPatSel[i].x2 + (float)m_RectsPatSel[i].x) / 2.0f) - 2.0f;
+            yi = (((float)m_RectsPatSel[i].y2 + (float)m_RectsPatSel[i].y) / 2.0f) - 2.0f;
+
+            if (i == m_PatClk)
+                nvgFillColor(args.vg, nvgRGBA(0, 0xFF, 0, 0xFF));
+            else
+                nvgFillColor(args.vg, nvgRGBA(0, 0, 0, 0xFF));
+
+            nvgBeginPath(args.vg);
+
+            nvgMoveTo(args.vg, xi, yi);
+            nvgLineTo(args.vg, xi + 4.0f, yi);
+            nvgLineTo(args.vg, xi + 4.0f, yi + 4.0f);
+            nvgLineTo(args.vg, xi, yi + 4.0f);
+
+            nvgClosePath(args.vg);
+            nvgFill(args.vg);
+        }
+    }
+
     //-----------------------------------------------------
     // Procedure:   isPoint
     //-----------------------------------------------------
@@ -2064,6 +2129,8 @@ struct LEDMeterWidget : TransparentWidget
     }
 };
 
+#include <iostream>
+
 //-----------------------------------------------------
 // Keyboard_3Oct_Widget
 //-----------------------------------------------------
@@ -2371,6 +2438,18 @@ struct Keyboard_3Oct_Widget : OpaqueWidget
         {
             if (m_KeySave[key] != -1)
                 drawkey(args.vg, m_KeySave[key], true);
+        }
+    }
+
+    void drawLayer(const DrawArgs &args, int layer) override
+    {
+        if (layer == 1)
+        {
+            for (auto key = 0; key < m_MaxMultKeys; key++)
+            {
+                if (m_KeySave[key] != -1)
+                    drawkey(args.vg, m_KeySave[key], true);
+            }
         }
     }
 };
