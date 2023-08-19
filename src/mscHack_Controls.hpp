@@ -268,6 +268,7 @@ struct Widget_EnvelopeEdit : OpaqueWidget
 
     // overrides
     void draw(const DrawArgs &args) override;
+    void drawLayer(const DrawArgs &args, int layer) override;
     void onButton(const event::Button &e) override;
     void onDragStart(const event::DragStart &e) override;
     void onDragEnd(const event::DragEnd &e) override;

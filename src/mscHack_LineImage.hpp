@@ -55,19 +55,8 @@ struct Widget_LineImage : TransparentWidget
         return true;
     }
 
-    //-----------------------------------------------------
-    // Procedure:   draw
-    //-----------------------------------------------------
     void draw(const DrawArgs &args) override
     {
-        Vec *pv; //, *last, *next, dl, dn;
-        unsigned char index;
-
-        // nvgBezierTo(vg, sx[i-1]+dx*0.5f,sy[i-1], sx[i]-dx*0.5f,sy[i], sx[i],sy[i]);
-
-        if (!m_bInitialized)
-            return;
-
         nvgScissor(args.vg, 0, 0, box.size.x, box.size.y);
         // nvgShapeAntiAlias( args.vg, 1);
 
@@ -75,6 +64,23 @@ struct Widget_LineImage : TransparentWidget
         nvgRect(args.vg, 0, 0, box.size.x - 1, box.size.y - 1);
         nvgFillColor(args.vg, nvgRGBA(0, 0, 0, 0x80));
         nvgFill(args.vg);
+    }
+
+    //-----------------------------------------------------
+    // Procedure:   draw
+    //-----------------------------------------------------
+    void drawLayer(const DrawArgs &args, int layer) override
+    {
+        if (layer != 1)
+            return;
+
+        Vec *pv; //, *last, *next, dl, dn;
+        unsigned char index;
+
+        // nvgBezierTo(vg, sx[i-1]+dx*0.5f,sy[i-1], sx[i]-dx*0.5f,sy[i], sx[i],sy[i]);
+
+        if (!m_bInitialized)
+            return;
 
         nvgStrokeWidth(args.vg, 2.5f);
         nvgStrokeColor(args.vg, nvgRGBA(0, 255, 255, 250));
@@ -95,22 +101,6 @@ struct Widget_LineImage : TransparentWidget
         {
             pv = &m_Q.item[index++];
             nvgLineTo(args.vg, pv->x, pv->y);
-
-            /* dl.x = (pv->x - last->x) * 0.5f;
-             dl.y = (pv->y - last->y) * 0.5f;
-             dn.x = (pv->x - next->x) * 0.5f;
-             dn.y = (pv->y - next->y) * 0.5f;
-
-             if( last->x > pv->x || last->y > pv->y )
-                 nvgBezierTo( args.vg, pv->x + dn.x, pv->y + dn.y, pv->x + dl.x, pv->y + dl.y,
-             pv->x, pv->y ); else nvgBezierTo( args.vg, pv->x + dl.x, pv->y + dl.y, pv->x + dn.x,
-             pv->y + dn.y, pv->x, pv->y );
-
-             //nvgBezierTo( args.vg, pv->x + dn.x, pv->y + dn.y, pv->x + dl.x, pv->y + dl.y, pv->x,
-             pv->y );
-             //nvgBezierTo( args.vg, pv->y, pv->x, pv->y, pv->x, pv->y, pv->y );l
-             last = pv;
-             pv = next;*/
         }
 
         nvgStroke(args.vg);

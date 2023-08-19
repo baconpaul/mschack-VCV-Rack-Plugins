@@ -305,10 +305,26 @@ void Widget_EnvelopeEdit::draw(const DrawArgs &args)
         y += divsize;
     }
 
+    // draw indicator line
+    if (m_EnvData[m_currentChannel].m_Range != EnvelopeData::RANGE_Audio)
+    {
+        nvgStrokeColor(args.vg, nvgRGBA(255, 255, 255, 80));
+        nvgBeginPath(args.vg);
+        nvgMoveTo(args.vg, m_EnvData[m_currentChannel].m_fIndicator * box.size.x, 0);
+        nvgLineTo(args.vg, m_EnvData[m_currentChannel].m_fIndicator * box.size.x, box.size.y);
+        nvgStroke(args.vg);
+    }
+}
+
+void Widget_EnvelopeEdit::drawLayer(const rack::widget::Widget::DrawArgs &args, int layer)
+{
+    if (layer != 1 || !m_bInitialized)
+        return;
+
     if (m_EnvData[m_currentChannel].m_bGateMode)
     {
         // draw rects
-        for (h = 0; h < ENVELOPE_DIVISIONS; h++)
+        for (auto h = 0; h < ENVELOPE_DIVISIONS; h++)
         {
             nvgBeginPath(args.vg);
             nvgRect(args.vg, h * m_divw,
@@ -320,14 +336,15 @@ void Widget_EnvelopeEdit::draw(const DrawArgs &args)
     }
     else
     {
-        nvgStrokeColor(args.vg, nvgRGBA(255, 255, 255, 255));
+        nvgStrokeColor(args.vg,
+                       nvgRGBA(255, 255, 255, 255 * (0.3 + 0.7 * rack::settings::rackBrightness)));
         nvgBeginPath(args.vg);
 
-        x = 0;
+        auto x = 0;
         nvgMoveTo(args.vg, x, (1.0f - m_EnvData[m_currentChannel].m_HandleVal[0]) * box.size.y);
 
         // draw lines
-        for (h = 1; h < ENVELOPE_HANDLES; h++)
+        for (auto h = 1; h < ENVELOPE_HANDLES; h++)
         {
             x += m_divw;
             nvgLineTo(args.vg, x, (1.0f - m_EnvData[m_currentChannel].m_HandleVal[h]) * box.size.y);
@@ -337,10 +354,10 @@ void Widget_EnvelopeEdit::draw(const DrawArgs &args)
 
         x = 0;
         // draw handles
-        for (h = 0; h < ENVELOPE_DIVISIONS + 1; h++)
+        for (auto h = 0; h < ENVELOPE_DIVISIONS + 1; h++)
         {
             nvgBeginPath(args.vg);
-            y = (1.0f - m_EnvData[m_currentChannel].m_HandleVal[h]) * box.size.y;
+            auto y = (1.0f - m_EnvData[m_currentChannel].m_HandleVal[h]) * box.size.y;
             nvgRect(args.vg, x - m_handleSizeD2, y - m_handleSizeD2, m_handleSize, m_handleSize);
             nvgFillColor(args.vg, nvgRGBA(m_HandleCol[h].Col[2], m_HandleCol[h].Col[1],
                                           m_HandleCol[h].Col[0], 255));
@@ -348,16 +365,6 @@ void Widget_EnvelopeEdit::draw(const DrawArgs &args)
 
             x += m_divw;
         }
-    }
-
-    // draw indicator line
-    if (m_EnvData[m_currentChannel].m_Range != EnvelopeData::RANGE_Audio)
-    {
-        nvgStrokeColor(args.vg, nvgRGBA(255, 255, 255, 80));
-        nvgBeginPath(args.vg);
-        nvgMoveTo(args.vg, m_EnvData[m_currentChannel].m_fIndicator * box.size.x, 0);
-        nvgLineTo(args.vg, m_EnvData[m_currentChannel].m_fIndicator * box.size.x, box.size.y);
-        nvgStroke(args.vg);
     }
 }
 
