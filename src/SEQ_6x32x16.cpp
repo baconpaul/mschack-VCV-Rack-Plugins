@@ -46,10 +46,7 @@ struct SEQ_6x32x16 : Module
         nOUTPUTS = OUT_BEAT1 + nCHANNELS
     };
 
-    inline bool areWidgetsAttached()
-    {
-        return m_pPatternDisplay[0] != nullptr;
-    }
+    inline bool areWidgetsAttached() { return m_pPatternDisplay[0] != nullptr; }
 
     bool m_bPauseState[nCHANNELS] = {};
     bool m_bBiLevelState[nCHANNELS] = {};

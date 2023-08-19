@@ -99,7 +99,8 @@ struct PingPong : Module
         configParam(PARAM_CUTOFF, 0.0f, 1.0f, 0.0f, "Filter Cutoff");
         configParam(PARAM_Q, 0.0f, 1.0f, 0.0f, "Filter Resonance");
         configParam(PARAM_MIX, 0.0f, 1.0f, 0.0f, "Wet/Dry Mix");
-        configSwitch(PARAM_FILTER_MODE, 0.0, 4.0, 0.0, "Filter Type", {"Off", "LowPass", "HighPass", "BandPass", "Notch"});
+        configSwitch(PARAM_FILTER_MODE, 0.0, 4.0, 0.0, "Filter Type",
+                     {"Off", "LowPass", "HighPass", "BandPass", "Notch"});
 
         configInput(INPUT_L, "Left");
         configInput(INPUT_R, "Right");
@@ -251,10 +252,7 @@ struct PingPong_Widget : ModuleWidget
 // Procedure:   reset
 //
 //-----------------------------------------------------
-void PingPong::onReset()
-{
-    m_bReverseState = false;
-}
+void PingPong::onReset() { m_bReverseState = false; }
 
 //-----------------------------------------------------
 // Procedure:

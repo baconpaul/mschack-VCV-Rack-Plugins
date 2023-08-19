@@ -33,8 +33,6 @@ struct Maude_221 : Module
         nOUTPUTS
     };
 
-    bool m_bInitialized = false;
-
     // Contructor
     Maude_221()
     {
@@ -47,6 +45,16 @@ struct Maude_221 : Module
         configParam(PARAM_DCOFF, -5.0, 5.0, 0.0, "DC Offset");
         configParam(PARAM_CVAMTA, 0.0, 1.0, 0.0, "CVA Amount");
         configParam(PARAM_CVAMTB, 0.0, 1.0, 0.0, "CVB Amount");
+
+        configInput(INPUTA, "Signal A");
+        configInput(INPUTB, "Signal B");
+
+        configInput(INPUTCVA, "Limit A CV");
+        configInput(INPUTCVB, "Limit B CV");
+
+        configOutput(OUTPUTC, "Output");
+
+        configBypass(INPUTA, OUTPUTC);
     }
 
     int m_RectMode[3]{1, 1, 2};
@@ -66,7 +74,7 @@ void Maude_221_RectSelect(void *pClass, int id, int nbutton, bool bOn)
     Maude_221 *mymodule;
     mymodule = (Maude_221 *)pClass;
 
-    if (!mymodule || !mymodule->m_bInitialized)
+    if (!mymodule)
         return;
 
     mymodule->m_RectMode[id] = nbutton;
@@ -138,11 +146,6 @@ struct Maude_221_Widget : ModuleWidget
 
         // output
         addOutput(createOutput<MyPortOutSmall>(Vec(50, 344), module, Maude_221::OUTPUTC));
-
-        if (module)
-        {
-            module->m_bInitialized = true;
-        }
     }
 
     void step() override
@@ -196,9 +199,6 @@ void Maude_221::dataFromJson(json_t *root) { JsonParams(FROMJSON, root); }
 void Maude_221::process(const ProcessArgs &args)
 {
     float inA, inB, out = 0.0f, lima, limb;
-
-    if (!m_bInitialized)
-        return;
 
     if (!inputs[INPUTA].active && !inputs[INPUTB].isConnected())
     {

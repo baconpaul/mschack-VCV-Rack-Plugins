@@ -93,8 +93,6 @@ struct Morze : Module
         nLIGHTS
     };
 
-    bool m_bInitialized = false;
-
     int m_Index = 0;
     char m_Code[1024] = {};
     int m_count = 0;
@@ -105,7 +103,9 @@ struct Morze : Module
     dsp::SchmittTrigger m_SchmitTrig;
     bool m_bTrigWait = true;
 
-    std::string m_TextFieldText{"mscHack"};
+    constexpr static const char *s_initText{"mscHack"};
+
+    std::string m_TextFieldText{s_initText};
     std::string m_pTextLabelText{""};
 
     bool m_bOneShot = false;
@@ -116,6 +116,9 @@ struct Morze : Module
         config(nPARAMS, nINPUTS, nOUTPUTS, nLIGHTS);
 
         configParam(PARAM_SPEED, 0.0f, 1.0f, 0.5f, "Morse speed");
+
+        configInput(IN_TRIG, "Trigger Signal");
+        configOutput(OUT_GATE, "Morse Code Gate");
     }
 
     void Text2Code(char *strText);
@@ -173,9 +176,8 @@ struct Morze_Widget : ModuleWidget
         m_TextField = tf;
         m_TextField->box.size = Vec(67, 150.0);
         m_TextField->multiline = true;
+        m_TextField->setText(Morze::s_initText);
         addChild(m_TextField);
-        if (!module)
-            m_TextField->setText("mscHack");
 
         m_pTextLabel = new Label();
         m_pTextLabel->box.pos = Vec(30, 250);
@@ -186,13 +188,6 @@ struct Morze_Widget : ModuleWidget
 
         addChild(createWidget<ScrewSilver>(Vec(30, 0)));
         addChild(createWidget<ScrewSilver>(Vec(30, 365)));
-
-        if (module)
-        {
-            module->Text2Code((char *)module->m_TextFieldText.c_str());
-            // module->BuildWaves();
-            module->m_bInitialized = true;
-        }
     }
 
     Morze *asMorze() { return dynamic_cast<Morze *>(module); }
@@ -437,9 +432,6 @@ bool Morze::GetGate(void)
 void Morze::process(const ProcessArgs &args)
 {
     static int checkcount = 0;
-
-    if (!m_bInitialized)
-        return;
 
     if (--checkcount <= 0)
     {

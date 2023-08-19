@@ -137,7 +137,7 @@ struct Seq_Triad2 : Module
         for (int kb = 0; kb < nKEYBOARDS; kb++)
         {
             for (int pat = 0; pat < nPATTERNS; pat++)
-                m_nMaxSteps[kb][pat] = nSTEPS-1;
+                m_nMaxSteps[kb][pat] = nSTEPS - 1;
         }
     }
 
