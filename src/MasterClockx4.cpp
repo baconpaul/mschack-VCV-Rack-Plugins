@@ -36,27 +36,17 @@ struct MasterClockx4 : Module
         nOUTPUTS
     };
 
-    bool m_bInitialized = false;
-
     float m_fBPM = 120;
 
-    MyLED7DigitDisplay *m_pDigitDisplayMult[nCHANNELS] = {};
-    MyLED7DigitDisplay *m_pDigitDisplayBPM = NULL;
-
-    MyLEDButton *m_pButtonGlobalStop = NULL;
-    MyLEDButton *m_pButtonGlobalTrig = NULL;
-    MyLEDButton *m_pButtonStop[nCHANNELS] = {};
-    MyLEDButton *m_pButtonTrig[nCHANNELS] = {};
-    MyLEDButton *m_pButtonTimeX2[nCHANNELS] = {};
-
     std::atomic<bool> m_refreshWidgets{false};
-    void doWidgetRefresh();
 
     bool m_bGlobalSync = false;
     bool m_bStopState[nCHANNELS] = {};
     bool m_bGlobalStopState = false;
     bool m_bChannelSyncPending[nCHANNELS] = {};
     bool m_bTimeX2[nCHANNELS] = {};
+
+    int m_bIsTriggered[nCHANNELS]{};
 
     int m_ChannelDivBeatCount[nCHANNELS] = {};
     float m_fChannelBeatsPers[nCHANNELS] = {};
@@ -72,9 +62,6 @@ struct MasterClockx4 : Module
     dsp::PulseGenerator m_PulseClock[nCHANNELS];
     dsp::PulseGenerator m_PulseSync[nCHANNELS];
     dsp::SchmittTrigger m_SchmittSyncIn[nCHANNELS];
-
-    ParamWidget *m_pBpmKnob = NULL;
-    ParamWidget *m_pHumanKnob = NULL;
 
     // Contructor
     MasterClockx4()
@@ -103,7 +90,7 @@ struct MasterClockx4 : Module
             auto s = std::to_string(i + 1);
             for (int c = 0; c < 4; ++c)
             {
-                auto cs = " Copy " + std::to_string(c + 1);
+                auto cs = std::string();
                 configOutput(OUTPUT_CLK + (i * 4) + c, "Clock " + s + cs);
                 configOutput(OUTPUT_TRIG + (i * 4) + c, "Trig " + s + cs);
             }
@@ -248,8 +235,7 @@ void MyLEDButton_ChannelSync(void *pClass, int id, bool bOn)
     mymodule = (MasterClockx4 *)pClass;
     mymodule->m_bChannelSyncPending[id] = true;
 
-    if (mymodule->m_pButtonTrig[id])
-        mymodule->m_pButtonTrig[id]->Set(true);
+    mymodule->m_bIsTriggered[id] = 5;
 }
 
 //-----------------------------------------------------
@@ -259,13 +245,22 @@ void MyLEDButton_ChannelSync(void *pClass, int id, bool bOn)
 
 struct MasterClockx4_Widget : ModuleWidget
 {
+    MyLED7DigitDisplay *m_pDigitDisplayMult[nCHANNELS] = {};
+    MyLED7DigitDisplay *m_pDigitDisplayBPM = NULL;
+
+    MyLEDButton *m_pButtonGlobalStop = NULL;
+    MyLEDButton *m_pButtonGlobalTrig = NULL;
+    MyLEDButton *m_pButtonStop[nCHANNELS] = {};
+    MyLEDButton *m_pButtonTrig[nCHANNELS] = {};
+    MyLEDButton *m_pButtonTimeX2[nCHANNELS] = {};
+
+    ParamWidget *m_pBpmKnob = NULL;
+    ParamWidget *m_pHumanKnob = NULL;
 
     MasterClockx4_Widget(MasterClockx4 *module)
     {
         int ch, x, y;
-        PModTempInstance<MasterClockx4> pmod{module};
 
-        // box.size = Vec( 15*18, 380);
         setModule(module);
 
         setPanel(APP->window->loadSvg(asset::plugin(thePlugin, "res/MasterClockx4.svg")));
@@ -276,32 +271,32 @@ struct MasterClockx4_Widget : ModuleWidget
         addChild(createWidget<ScrewSilver>(Vec(box.size.x - 30, 365)));
 
         // bpm knob
-        pmod->m_pBpmKnob =
+        m_pBpmKnob =
             createParam<MasterClockx4::MyBPM_Knob>(Vec(9, 50), module, MasterClockx4::PARAM_BPM);
-        addParam(pmod->m_pBpmKnob);
+        addParam(m_pBpmKnob);
 
         // bpm display
-        pmod->m_pDigitDisplayBPM =
+        m_pDigitDisplayBPM =
             new MyLED7DigitDisplay(5, 115, 0.055, DWRGB(0, 0, 0), DWRGB(0xFF, 0xFF, 0xFF),
                                    MyLED7DigitDisplay::TYPE_FLOAT2, 5);
-        addChild(pmod->m_pDigitDisplayBPM);
+        addChild(m_pDigitDisplayBPM);
 
         // global stop switch
-        pmod->m_pButtonGlobalStop =
+        m_pButtonGlobalStop =
             new MyLEDButton(22, 144, 25, 25, 20.0, DWRGB(180, 180, 180), DWRGB(255, 0, 0),
                             MyLEDButton::TYPE_SWITCH, 0, module, MyLEDButton_GlobalStop);
-        addChild(pmod->m_pButtonGlobalStop);
+        addChild(m_pButtonGlobalStop);
 
         // global sync button
-        pmod->m_pButtonGlobalTrig =
+        m_pButtonGlobalTrig =
             new MyLEDButton(22, 202, 25, 25, 20.0, DWRGB(180, 180, 180), DWRGB(0, 255, 255),
                             MyLEDButton::TYPE_MOMENTARY, 0, module, MyLEDButton_GlobalTrig);
-        addChild(pmod->m_pButtonGlobalTrig);
+        addChild(m_pButtonGlobalTrig);
 
         // humanize knob
-        pmod->m_pHumanKnob = createParam<MasterClockx4::MyHumanize_Knob>(
-            Vec(22, 235), module, MasterClockx4::PARAM_HUMANIZE);
-        addParam(pmod->m_pHumanKnob);
+        m_pHumanKnob = createParam<MasterClockx4::MyHumanize_Knob>(Vec(22, 235), module,
+                                                                   MasterClockx4::PARAM_HUMANIZE);
+        addParam(m_pHumanKnob);
 
         // add chain out
         addOutput(createOutput<MyPortOutSmall>(Vec(30, 345), module, MasterClockx4::OUTPUT_CHAIN));
@@ -315,26 +310,26 @@ struct MasterClockx4_Widget : ModuleWidget
         for (ch = 0; ch < nCHANNELS; ch++)
         {
             // x2
-            pmod->m_pButtonTimeX2[ch] =
+            m_pButtonTimeX2[ch] =
                 new MyLEDButton(x + 2, y + 2, 11, 11, 9.0, DWRGB(180, 180, 180), DWRGB(0, 255, 255),
                                 MyLEDButton::TYPE_SWITCH, ch, module, MyLEDButton_TimeX2);
-            addChild(pmod->m_pButtonTimeX2[ch]);
+            addChild(m_pButtonTimeX2[ch]);
 
             // clock mult knob
             addParam(createParam<MasterClockx4::MyMult_Knob>(Vec(x + 13, y + 13), module,
                                                              MasterClockx4::PARAM_MULT + ch));
 
             // mult display
-            pmod->m_pDigitDisplayMult[ch] =
+            m_pDigitDisplayMult[ch] =
                 new MyLED7DigitDisplay(x + 10, y + 48, 0.07, DWRGB(0, 0, 0),
                                        DWRGB(0xFF, 0xFF, 0xFF), MyLED7DigitDisplay::TYPE_INT, 2);
-            addChild(pmod->m_pDigitDisplayMult[ch]);
+            addChild(m_pDigitDisplayMult[ch]);
 
             // sync triggers
-            pmod->m_pButtonTrig[ch] = new MyLEDButton(
-                x + 76, y + 4, 19, 19, 15.0, DWRGB(180, 180, 180), DWRGB(0, 255, 255),
-                MyLEDButton::TYPE_MOMENTARY, ch, module, MyLEDButton_ChannelSync);
-            addChild(pmod->m_pButtonTrig[ch]);
+            m_pButtonTrig[ch] = new MyLEDButton(x + 76, y + 4, 19, 19, 15.0, DWRGB(180, 180, 180),
+                                                DWRGB(0, 255, 255), MyLEDButton::TYPE_MOMENTARY, ch,
+                                                module, MyLEDButton_ChannelSync);
+            addChild(m_pButtonTrig[ch]);
 
             addInput(createInput<MyPortInSmall>(Vec(x + 54, y + 5), module,
                                                 MasterClockx4::INPUT_EXT_SYNC + ch));
@@ -348,10 +343,10 @@ struct MasterClockx4_Widget : ModuleWidget
                                                    MasterClockx4::OUTPUT_TRIG + (ch * 4) + 3));
 
             // clock out
-            pmod->m_pButtonStop[ch] = new MyLEDButton(
-                x + 132, y + 4, 19, 19, 15.0, DWRGB(180, 180, 180), DWRGB(255, 0, 0),
-                MyLEDButton::TYPE_SWITCH, ch, module, MyLEDButton_ChannelStop);
-            addChild(pmod->m_pButtonStop[ch]);
+            m_pButtonStop[ch] = new MyLEDButton(x + 132, y + 4, 19, 19, 15.0, DWRGB(180, 180, 180),
+                                                DWRGB(255, 0, 0), MyLEDButton::TYPE_SWITCH, ch,
+                                                module, MyLEDButton_ChannelStop);
+            addChild(m_pButtonStop[ch]);
 
             addOutput(createOutput<MyPortOutSmall>(Vec(x + 107, y + 31), module,
                                                    MasterClockx4::OUTPUT_CLK + (ch * 4) + 0));
@@ -367,8 +362,7 @@ struct MasterClockx4_Widget : ModuleWidget
 
         if (module)
         {
-            module->m_bInitialized = true;
-            module->doWidgetRefresh();
+            module->m_refreshWidgets = true;
         }
     }
 
@@ -379,10 +373,84 @@ struct MasterClockx4_Widget : ModuleWidget
         {
             if (az->m_refreshWidgets)
             {
-                az->doWidgetRefresh();
+                az->m_refreshWidgets = false;
+                m_pButtonGlobalStop->Set(az->m_bGlobalStopState);
+
+                for (int ch = 0; ch < nCHANNELS; ch++)
+                {
+                    m_pButtonStop[ch]->Set(az->m_bStopState[ch]);
+                    m_pButtonTimeX2[ch]->Set(az->m_bTimeX2[ch]);
+                    // lg.f( "value = %d\n", (int)params[ PARAM_MULT + ch ].value );
+                    az->SetDisplayLED(ch, az->m_ChannelMultSelect[ch]);
+                }
+
+                // These two are pretty dicey
+                az->m_fMainClockCount = 0;
+                az->BPMChange(az->params[MasterClockx4::PARAM_BPM].value, true);
+
+                if (m_pDigitDisplayBPM)
+                    m_pDigitDisplayBPM->SetVal((int)(az->m_fBPM * 100.0));
+            }
+
+            m_pButtonGlobalStop->Set(az->m_bGlobalStopState);
+
+            if (az->m_bWasChained == m_pHumanKnob->visible)
+            {
+                m_pHumanKnob->visible = !az->m_bWasChained;
+                m_pBpmKnob->visible = !az->m_bWasChained;
+            }
+
+            for (int i = 0; i < nCHANNELS; ++i)
+            {
+                if (az->m_bIsTriggered[i] > 1)
+                {
+                    az->m_bIsTriggered[i]--;
+                    m_pButtonTrig[i]->Set(true);
+                }
+                if (az->m_bIsTriggered[i] == 1)
+                {
+                    az->m_bIsTriggered[i]--;
+                    m_pButtonTrig[i]->Set(false);
+                }
+            }
+
+            m_pDigitDisplayBPM->SetVal((int)(az->m_fBPM * 100.0));
+            for (int i = 0; i < nCHANNELS; ++i)
+            {
+                stepDisplayLED(az, i);
             }
         }
         Widget::step();
+    }
+
+    void stepDisplayLED(MasterClockx4 *az, int ch)
+    {
+        auto val = az->m_ChannelMultSelect[ch];
+        int col, mult = 1;
+
+        if (az->m_bTimeX2[ch])
+            mult = 2;
+
+        if (val < MID_INDEX)
+        {
+            col = DWRGB(0xFF, 0, 0);
+        }
+        else if (val > MID_INDEX)
+        {
+            col = DWRGB(0, 0xFF, 0xFF);
+        }
+        else
+        {
+            mult = 1;
+            col = DWRGB(0xFF, 0xFF, 0xFF);
+        }
+
+        auto sv = multdisplayval[val] * mult;
+        if (m_pDigitDisplayMult[ch]->m_iVal != sv)
+        {
+            m_pDigitDisplayMult[ch]->SetLEDCol(col);
+            m_pDigitDisplayMult[ch]->SetVal(multdisplayval[val] * mult);
+        }
     }
 };
 
@@ -423,34 +491,7 @@ void MasterClockx4::dataFromJson(json_t *root)
 {
     JsonParams(FROMJSON, root);
 
-    if (m_pButtonGlobalStop)
-    {
-        doWidgetRefresh();
-    }
-    else
-    {
-        m_refreshWidgets = true;
-    }
-}
-
-void MasterClockx4::doWidgetRefresh()
-{
-    m_refreshWidgets = false;
-    m_pButtonGlobalStop->Set(m_bGlobalStopState);
-
-    for (int ch = 0; ch < nCHANNELS; ch++)
-    {
-        m_pButtonStop[ch]->Set(m_bStopState[ch]);
-        m_pButtonTimeX2[ch]->Set(m_bTimeX2[ch]);
-        // lg.f( "value = %d\n", (int)params[ PARAM_MULT + ch ].value );
-        SetDisplayLED(ch, m_ChannelMultSelect[ch]);
-    }
-
-    m_fMainClockCount = 0;
-    BPMChange(params[PARAM_BPM].value, true);
-
-    if (m_pDigitDisplayBPM)
-        m_pDigitDisplayBPM->SetVal((int)(m_fBPM * 100.0));
+    m_refreshWidgets = true;
 }
 
 //-----------------------------------------------------
@@ -459,23 +500,15 @@ void MasterClockx4::doWidgetRefresh()
 //-----------------------------------------------------
 void MasterClockx4::onReset()
 {
-    if (!m_bInitialized)
-        return;
-
     m_fBPM = 120;
 
-    if (m_pDigitDisplayBPM)
-        m_pDigitDisplayBPM->SetVal((int)(m_fBPM * 100.0));
-
     m_bGlobalStopState = false;
-    m_pButtonGlobalStop->Set(m_bGlobalStopState);
+    m_refreshWidgets = true;
 
     for (int ch = 0; ch < nCHANNELS; ch++)
     {
         m_bTimeX2[ch] = false;
         m_bStopState[ch] = false;
-        m_pButtonStop[ch]->Set(false);
-        m_pButtonTimeX2[ch]->Set(false);
         SetDisplayLED(ch, MID_INDEX);
     }
 
@@ -488,36 +521,7 @@ void MasterClockx4::onReset()
 //-----------------------------------------------------
 void MasterClockx4::SetDisplayLED(int ch, int val)
 {
-    int col, mult = 1;
-
-    if (!m_bInitialized)
-        return;
-
-    if (m_bTimeX2[ch])
-        mult = 2;
-
-    if (val < MID_INDEX)
-    {
-        col = DWRGB(0xFF, 0, 0);
-    }
-    else if (val > MID_INDEX)
-    {
-        col = DWRGB(0, 0xFF, 0xFF);
-    }
-    else
-    {
-        mult = 1;
-        col = DWRGB(0xFF, 0xFF, 0xFF);
-    }
-
-    if (m_pDigitDisplayMult[ch])
-    {
-        m_ChannelMultSelect[ch] = val;
-        m_pDigitDisplayMult[ch]->SetLEDCol(col);
-
-        m_pDigitDisplayMult[ch]->SetVal(multdisplayval[val] * mult);
-    }
-
+    m_ChannelMultSelect[ch] = val;
     CalcChannelClockRate(ch);
 }
 
@@ -546,9 +550,6 @@ void MasterClockx4::BPMChange(float fbpm, bool bforce)
 
     m_fBPM = fbpm;
     m_fBeatsPers = fbpm / 60.0;
-
-    if (m_pDigitDisplayBPM)
-        m_pDigitDisplayBPM->SetVal((int)(m_fBPM * 100.0));
 
     for (int i = 0; i < nCHANNELS; i++)
         CalcChannelClockRate(i);
@@ -586,18 +587,9 @@ void MasterClockx4::process(const ProcessArgs &args)
     float fSyncPulseOut, fClkPulseOut;
     bool bMainClockTrig = false, bChannelClockTrig;
 
-    if (!m_bInitialized)
-        return;
-
     // use the input chain trigger for our clock
     if (inputs[INPUT_CHAIN].isConnected())
     {
-        if (!m_bWasChained)
-        {
-            m_pHumanKnob->visible = false;
-            m_pBpmKnob->visible = false;
-        }
-
         m_bWasChained = true;
 
         // value of less than zero is a trig
@@ -610,8 +602,6 @@ void MasterClockx4::process(const ProcessArgs &args)
             m_bGlobalSync = (ival & 2);
 
             m_bGlobalStopState = (ival & 4);
-
-            m_pButtonGlobalStop->Set(m_bGlobalStopState);
         }
         // values greater than zero are the bpm
         else
@@ -624,11 +614,8 @@ void MasterClockx4::process(const ProcessArgs &args)
         // go back to our bpm if chain removed
         if (m_bWasChained)
         {
-            m_pHumanKnob->visible = true;
-            m_pBpmKnob->visible = true;
             m_bWasChained = false;
             BPMChange(params[PARAM_BPM].value, false);
-            m_pButtonGlobalStop->Set(m_bGlobalStopState);
         }
 
         // keep track of main bpm
@@ -672,8 +659,7 @@ void MasterClockx4::process(const ProcessArgs &args)
         // sync triggers
         if (m_bGlobalSync || m_SchmittSyncIn[ch].process(inputs[INPUT_EXT_SYNC + ch].getVoltage()))
         {
-            if (m_pButtonTrig[ch])
-                m_pButtonTrig[ch]->Set(true);
+            m_bIsTriggered[ch] = 5;
 
             m_bChannelSyncPending[ch] = true;
         }
@@ -683,9 +669,6 @@ void MasterClockx4::process(const ProcessArgs &args)
         {
             if (m_bChannelSyncPending[ch])
             {
-                if (m_pButtonTrig[ch])
-                    m_pButtonTrig[ch]->Set(true);
-
                 m_bChannelSyncPending[ch] = false;
                 m_PulseSync[ch].trigger(1e-3);
 
