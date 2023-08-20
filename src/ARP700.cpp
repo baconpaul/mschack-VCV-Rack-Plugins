@@ -307,7 +307,7 @@ void ARP700_Widget_NoteChangeCallback(void *pClass, int kb, int notepressed, int
            sizeof(int) * MAX_ARP_NOTES);
 
     int nu{0};
-    for (int i=0; i<16; ++i)
+    for (int i = 0; i < 16; ++i)
     {
         if (pnotes[i] >= 0)
             nu++;
@@ -361,7 +361,6 @@ struct ARP700_Widget : ModuleWidget
     MyLEDButton *m_pButtonPause = 0;
     MyLEDButtonStrip *m_pButtonMode = 0;
 
-
     ARP700_Widget(ARP700 *module)
     {
         int x, y, note, param;
@@ -376,7 +375,6 @@ struct ARP700_Widget : ModuleWidget
         addChild(createWidget<ScrewSilver>(Vec(box.size.x - 30, 0)));
         addChild(createWidget<ScrewSilver>(Vec(15, 365)));
         addChild(createWidget<ScrewSilver>(Vec(box.size.x - 30, 365)));
-
 
         // module->lg.Open("ARP700.txt");
 
@@ -393,9 +391,8 @@ struct ARP700_Widget : ModuleWidget
         addChild(m_pButtonCopy);
 
         // keyboard widget
-        pKeyboardWidget =
-            new Keyboard_3Oct_Widget(75, 38, MAX_ARP_NOTES, 0, DWRGB(255, 128, 64), module,
-                                     ARP700_Widget_NoteChangeCallback);
+        pKeyboardWidget = new Keyboard_3Oct_Widget(75, 38, MAX_ARP_NOTES, 0, DWRGB(255, 128, 64),
+                                                   module, ARP700_Widget_NoteChangeCallback);
         addChild(pKeyboardWidget);
 
         // octave select
@@ -512,16 +509,17 @@ struct ARP700_Widget : ModuleWidget
 
                 for (auto param = 0; param < SUBSTEP_PER_NOTE; param++)
                 {
-                    m_pButtonOnOff[note][param]->Set(az->m_PatternSave[az->m_PatCtrl.pat].onoffsel[note][param],
-                                                     true);
-                    m_pButtonLen[note][param]->Set(az->m_PatternSave[az->m_PatCtrl.pat].lensel[note][param], true);
-                    m_pButtonLenMod[note][param]->Set(az->m_PatternSave[az->m_PatCtrl.pat].lenmod[note][param],
-                                                      true);
+                    m_pButtonOnOff[note][param]->Set(
+                        az->m_PatternSave[az->m_PatCtrl.pat].onoffsel[note][param], true);
+                    m_pButtonLen[note][param]->Set(
+                        az->m_PatternSave[az->m_PatCtrl.pat].lensel[note][param], true);
+                    m_pButtonLenMod[note][param]->Set(
+                        az->m_PatternSave[az->m_PatCtrl.pat].lenmod[note][param], true);
                 }
             }
             m_pButtonOctaveSelect->Set(az->m_PatternSave[az->m_PatCtrl.pat].oct, true);
             m_pButtonMode->Set(az->m_PatternSave[az->m_PatCtrl.pat].mode, true);
-            m_pPatternSelect->SetPat(az->m_PatCtrl.pat , false);
+            m_pPatternSelect->SetPat(az->m_PatCtrl.pat, false);
             m_pPatternSelect->SetMax(az->m_PatCtrl.used);
 
             // set keyboard keys
@@ -534,7 +532,7 @@ struct ARP700_Widget : ModuleWidget
 
             auto nstep = az->m_currStep;
             auto substep = az->m_currSubstep;
-            if (nstep >=0 && substep >= 0)
+            if (nstep >= 0 && substep >= 0)
             {
                 m_pButtonLen[nstep][substep]->SetHiLightOn(
                     az->m_PatternSave[az->m_PatCtrl.pat].lensel[nstep][substep]);
@@ -747,8 +745,6 @@ void ARP700::ChangePattern(int index, bool bForce)
     }
 
     m_PatCtrl.pat = index;
-
-
 }
 
 //-----------------------------------------------------

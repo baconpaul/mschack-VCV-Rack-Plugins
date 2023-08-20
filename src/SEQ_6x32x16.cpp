@@ -46,18 +46,20 @@ struct SEQ_6x32x16 : Module
         nOUTPUTS = OUT_BEAT1 + nCHANNELS
     };
 
-    inline bool areWidgetsAttached() { return m_pPatternDisplay[0] != nullptr; }
-
     bool m_bPauseState[nCHANNELS] = {};
     bool m_bBiLevelState[nCHANNELS] = {};
 
-    SinglePatternClocked32 *m_pPatternDisplay[nCHANNELS] = {};
+    // SinglePatternClocked32 *m_pPatternDisplay[nCHANNELS] = {};
     int m_Pattern[nCHANNELS][nPROG][nSTEPS] = {};
     int m_MaxPat[nCHANNELS][nPROG] = {};
 
-    PatternSelectStrip *m_pProgramDisplay[nCHANNELS] = {};
+    // PatternSelectStrip *m_pProgramDisplay[nCHANNELS] = {};
     int m_CurrentProg[nCHANNELS] = {};
     int m_MaxProg[nCHANNELS] = {};
+    int m_PatClk[nCHANNELS]{};
+
+    std::atomic<int> m_iPendingPattern[3]{-1, -1, -1};
+
     PHRASE_CHANGE_STRUCT m_ProgPending[nCHANNELS] = {};
 
     dsp::SchmittTrigger m_SchTrigClock[nCHANNELS];
@@ -78,19 +80,19 @@ struct SEQ_6x32x16 : Module
 
     // trig mute
     bool m_bTrigMute = false;
-    MyLEDButton *m_pButtonTrigMute = NULL;
+    std::atomic<int> m_bTrigMuteCountdown{0};
 
     // buttons
-    MyLEDButton *m_pButtonPause[nCHANNELS] = {};
+    /*MyLEDButton *m_pButtonPause[nCHANNELS] = {};
     MyLEDButton *m_pButtonCopy[nCHANNELS] = {};
     MyLEDButton *m_pButtonBiLevel[nCHANNELS] = {};
     MyLEDButton *m_pButtonRand[nCHANNELS] = {};
     MyLEDButton *m_pButtonAutoPat[nCHANNELS] = {};
     MyLEDButton *m_pButtonHoldCV[nCHANNELS] = {};
     MyLEDButton *m_pButtonClear[nCHANNELS] = {};
+     */
 
     std::atomic<bool> m_refreshWidgets{false};
-    void doWidgetRefresh();
 
     bool m_bAutoPatChange[nCHANNELS] = {};
     bool m_bHoldCVState[nCHANNELS] = {};
@@ -141,6 +143,18 @@ struct SEQ_6x32x16 : Module
         }
     }
 
+    void ClockReset(int ch) { m_PatClk[ch] = 0; }
+    bool ClockInc(int ch)
+    {
+        m_PatClk[ch]++;
+
+        if (m_PatClk[ch] < 0 || m_PatClk[ch] > m_MaxPat[ch][m_CurrentProg[ch]] ||
+            m_PatClk[ch] >= nPROG)
+            m_PatClk[ch] = 0;
+
+        return m_PatClk[ch] == 0;
+    }
+
     // Overrides
     void process(const ProcessArgs &args) override;
     json_t *dataToJson() override;
@@ -164,6 +178,7 @@ void MyLEDButton_TrigMute(void *pClass, int id, bool bOn)
     SEQ_6x32x16 *mymodule;
     mymodule = (SEQ_6x32x16 *)pClass;
     mymodule->m_bTrigMute = bOn;
+    mymodule->m_refreshWidgets = true;
 }
 
 //-----------------------------------------------------
@@ -239,8 +254,8 @@ void MyLEDButton_Clear(void *pClass, int id, bool bOn)
         mymodule->m_Pattern[id][mymodule->m_CurrentProg[id]][i] = 0;
     }
 
-    mymodule->m_pPatternDisplay[id]->SetPatAll(
-        mymodule->m_Pattern[id][mymodule->m_CurrentProg[id]]);
+    // This is a bit heavy handed
+    mymodule->m_refreshWidgets = true;
 }
 
 //-----------------------------------------------------
@@ -251,7 +266,7 @@ void SEQ_6x32x16_PatternChangeCallback(void *pClass, int ch, int pat, int level,
 {
     SEQ_6x32x16 *mymodule = (SEQ_6x32x16 *)pClass;
 
-    if (!mymodule || !mymodule->areWidgetsAttached())
+    if (!mymodule)
         return;
 
     mymodule->m_MaxPat[ch][mymodule->m_CurrentProg[ch]] = maxpat;
@@ -266,7 +281,7 @@ void SEQ_6x32x16_ProgramChangeCallback(void *pClass, int ch, int pat, int max)
 {
     SEQ_6x32x16 *mymodule = (SEQ_6x32x16 *)pClass;
 
-    if (!mymodule || !mymodule->areWidgetsAttached())
+    if (!mymodule)
         return;
 
     if (mymodule->m_MaxProg[ch] != max)
@@ -315,12 +330,22 @@ struct SEQ_6x32x16_CVRange : MenuItem
 
 struct SEQ_6x32x16_Widget : ModuleWidget
 {
+    SinglePatternClocked32 *m_pPatternDisplay[nCHANNELS] = {};
+    PatternSelectStrip *m_pProgramDisplay[nCHANNELS] = {};
+
+    MyLEDButton *m_pButtonPause[nCHANNELS] = {};
+    MyLEDButton *m_pButtonCopy[nCHANNELS] = {};
+    MyLEDButton *m_pButtonBiLevel[nCHANNELS] = {};
+    MyLEDButton *m_pButtonRand[nCHANNELS] = {};
+    MyLEDButton *m_pButtonAutoPat[nCHANNELS] = {};
+    MyLEDButton *m_pButtonHoldCV[nCHANNELS] = {};
+    MyLEDButton *m_pButtonClear[nCHANNELS] = {};
+    MyLEDButton *m_pButtonTrigMute = NULL;
 
     SEQ_6x32x16_Widget(SEQ_6x32x16 *module)
     {
         int x, y, x2, y2;
         ParamWidget *pWidget = NULL;
-        PModTempInstance<SEQ_6x32x16> pmod{module};
 
         setModule(module);
 
@@ -342,10 +367,10 @@ struct SEQ_6x32x16_Widget : ModuleWidget
             createInput<MyPortInSmall>(Vec(90, 357), module, SEQ_6x32x16::IN_GLOBAL_PAT_CHANGE));
 
         // trig mute
-        pmod->m_pButtonTrigMute =
+        m_pButtonTrigMute =
             new MyLEDButton(491, 3, 15, 15, 13.0, DWRGB(180, 180, 180), DWRGB(255, 0, 0),
                             MyLEDButton::TYPE_SWITCH, 0, module, MyLEDButton_TrigMute);
-        addChild(pmod->m_pButtonTrigMute);
+        addChild(m_pButtonTrigMute);
 
         addInput(createInput<MyPortInSmall>(Vec(466, 1), module, SEQ_6x32x16::IN_GLOBAL_TRIG_MUTE));
 
@@ -358,17 +383,17 @@ struct SEQ_6x32x16_Widget : ModuleWidget
                                                 SEQ_6x32x16::IN_PAT_TRIG + ch));
 
             // pattern display
-            pmod->m_pPatternDisplay[ch] =
+            m_pPatternDisplay[ch] =
                 new SinglePatternClocked32(x + 39, y + 2, 13, 13, 5, 2, 7, DWRGB(255, 128, 64),
                                            DWRGB(18, 9, 0), DWRGB(180, 75, 180), DWRGB(80, 45, 80),
                                            nSTEPS, ch, module, SEQ_6x32x16_PatternChangeCallback);
-            addChild(pmod->m_pPatternDisplay[ch]);
+            addChild(m_pPatternDisplay[ch]);
 
             // program display
-            pmod->m_pProgramDisplay[ch] = new PatternSelectStrip(
+            m_pProgramDisplay[ch] = new PatternSelectStrip(
                 x + 106, y + 31, 9, 7, DWRGB(180, 180, 0), DWRGB(90, 90, 64), DWRGB(0, 180, 200),
                 DWRGB(0, 90, 90), nPROG, ch, module, SEQ_6x32x16_ProgramChangeCallback);
-            addChild(pmod->m_pProgramDisplay[ch]);
+            addChild(m_pProgramDisplay[ch]);
 
             // add knobs
             y2 = y + 31;
@@ -399,41 +424,41 @@ struct SEQ_6x32x16_Widget : ModuleWidget
                                                  SEQ_6x32x16::PARAM_LVL5_KNOB + ch));
 
             // add buttons
-            pmod->m_pButtonAutoPat[ch] =
+            m_pButtonAutoPat[ch] =
                 new MyLEDButton(x + 55, y + 35, 9, 9, 6.0, DWRGB(180, 180, 180), DWRGB(0, 255, 0),
                                 MyLEDButton::TYPE_SWITCH, ch, module, MyLEDButton_AutoPat);
-            addChild(pmod->m_pButtonAutoPat[ch]);
+            addChild(m_pButtonAutoPat[ch]);
 
-            pmod->m_pButtonPause[ch] =
+            m_pButtonPause[ch] =
                 new MyLEDButton(x + 26, y + 10, 11, 11, 8.0, DWRGB(180, 180, 180), DWRGB(255, 0, 0),
                                 MyLEDButton::TYPE_SWITCH, ch, module, MyLEDButton_Pause);
-            addChild(pmod->m_pButtonPause[ch]);
+            addChild(m_pButtonPause[ch]);
 
             y2 = y + 33;
-            pmod->m_pButtonCopy[ch] =
+            m_pButtonCopy[ch] =
                 new MyLEDButton(x + 290, y2, 11, 11, 8.0, DWRGB(180, 180, 180), DWRGB(0, 244, 244),
                                 MyLEDButton::TYPE_SWITCH, ch, module, MyLEDButton_CpyNxt);
-            addChild(pmod->m_pButtonCopy[ch]);
+            addChild(m_pButtonCopy[ch]);
 
-            pmod->m_pButtonRand[ch] =
+            m_pButtonRand[ch] =
                 new MyLEDButton(x + 315, y2, 11, 11, 8.0, DWRGB(180, 180, 180), DWRGB(0, 244, 244),
                                 MyLEDButton::TYPE_MOMENTARY, ch, module, MyLEDButton_Rand);
-            addChild(pmod->m_pButtonRand[ch]);
+            addChild(m_pButtonRand[ch]);
 
-            pmod->m_pButtonClear[ch] =
+            m_pButtonClear[ch] =
                 new MyLEDButton(x + 340, y2, 11, 11, 8.0, DWRGB(180, 180, 180), DWRGB(0, 244, 244),
                                 MyLEDButton::TYPE_MOMENTARY, ch, module, MyLEDButton_Clear);
-            addChild(pmod->m_pButtonClear[ch]);
+            addChild(m_pButtonClear[ch]);
 
-            pmod->m_pButtonHoldCV[ch] =
+            m_pButtonHoldCV[ch] =
                 new MyLEDButton(x + 405, y2, 11, 11, 8.0, DWRGB(180, 180, 180), DWRGB(0, 244, 244),
                                 MyLEDButton::TYPE_SWITCH, ch, module, MyLEDButton_HoldCV);
-            addChild(pmod->m_pButtonHoldCV[ch]);
+            addChild(m_pButtonHoldCV[ch]);
 
-            pmod->m_pButtonBiLevel[ch] =
+            m_pButtonBiLevel[ch] =
                 new MyLEDButton(x + 425, y2, 11, 11, 8.0, DWRGB(180, 180, 180), DWRGB(0, 244, 244),
                                 MyLEDButton::TYPE_SWITCH, ch, module, MyLEDButton_BiLevel);
-            addChild(pmod->m_pButtonBiLevel[ch]);
+            addChild(m_pButtonBiLevel[ch]);
 
             // add outputs
             addOutput(createOutput<MyPortOutSmall>(Vec(x + 580, y + 7), module,
@@ -448,7 +473,7 @@ struct SEQ_6x32x16_Widget : ModuleWidget
 
         if (module)
         {
-            module->doWidgetRefresh();
+            module->m_refreshWidgets = true;
         }
     }
 
@@ -478,7 +503,44 @@ struct SEQ_6x32x16_Widget : ModuleWidget
         {
             if (az->m_refreshWidgets)
             {
-                az->doWidgetRefresh();
+                az->m_refreshWidgets = false;
+                for (int ch = 0; ch < nCHANNELS; ch++)
+                {
+                    m_pButtonAutoPat[ch]->Set(az->m_bAutoPatChange[ch]);
+                    m_pButtonPause[ch]->Set(az->m_bPauseState[ch]);
+                    m_pButtonBiLevel[ch]->Set(az->m_bBiLevelState[ch]);
+                    m_pButtonHoldCV[ch]->Set(az->m_bHoldCVState[ch]);
+
+                    m_pPatternDisplay[ch]->SetPatAll(az->m_Pattern[ch][az->m_CurrentProg[ch]]);
+                    m_pPatternDisplay[ch]->SetMax(az->m_MaxPat[ch][az->m_CurrentProg[ch]]);
+
+                    m_pProgramDisplay[ch]->SetPat(az->m_CurrentProg[ch], false);
+                    m_pProgramDisplay[ch]->SetMax(az->m_MaxProg[ch]);
+                }
+
+                if (az->m_bTrigMute)
+                    m_pButtonTrigMute->Set(az->m_bTrigMute);
+            }
+
+            for (auto ch = 0; ch < nCHANNELS; ++ch)
+            {
+                m_pPatternDisplay[ch]->m_PatClk = az->m_PatClk[ch];
+                m_pButtonCopy[ch]->Set(ch == az->m_CopySrc);
+
+                if (az->m_iPendingPattern[ch] >= 0)
+                {
+                    m_pProgramDisplay[ch]->SetPat(az->m_iPendingPattern[ch], true);
+                }
+            }
+
+            if (az->m_bTrigMute || az->m_bTrigMuteCountdown > 0)
+            {
+                az->m_bTrigMuteCountdown--;
+                m_pButtonTrigMute->Set(true);
+            }
+            else
+            {
+                m_pButtonTrigMute->Set(false);
             }
         }
         Widget::step();
@@ -527,42 +589,9 @@ void SEQ_6x32x16::dataFromJson(json_t *root)
 {
     JsonParams(FROMJSON, root);
 
-    if (m_pButtonTrigMute)
-    {
-        doWidgetRefresh();
-    }
-    else
-    {
-        m_refreshWidgets = true;
-    }
+    m_refreshWidgets = true;
 
     snprintf(m_strRange, 10, "%.1fV", m_fCVRanges[m_RangeSelect]);
-}
-
-void SEQ_6x32x16::doWidgetRefresh()
-{
-    if (!areWidgetsAttached())
-    {
-        // This should never happen
-        return;
-    }
-    m_refreshWidgets = false;
-    for (int ch = 0; ch < nCHANNELS; ch++)
-    {
-        m_pButtonAutoPat[ch]->Set(m_bAutoPatChange[ch]);
-        m_pButtonPause[ch]->Set(m_bPauseState[ch]);
-        m_pButtonBiLevel[ch]->Set(m_bBiLevelState[ch]);
-        m_pButtonHoldCV[ch]->Set(m_bHoldCVState[ch]);
-
-        m_pPatternDisplay[ch]->SetPatAll(m_Pattern[ch][m_CurrentProg[ch]]);
-        m_pPatternDisplay[ch]->SetMax(m_MaxPat[ch][m_CurrentProg[ch]]);
-
-        m_pProgramDisplay[ch]->SetPat(m_CurrentProg[ch], false);
-        m_pProgramDisplay[ch]->SetMax(m_MaxProg[ch]);
-    }
-
-    if (m_bTrigMute)
-        m_pButtonTrigMute->Set(m_bTrigMute);
 }
 
 //-----------------------------------------------------
@@ -571,15 +600,6 @@ void SEQ_6x32x16::doWidgetRefresh()
 //-----------------------------------------------------
 void SEQ_6x32x16::onReset()
 {
-    if (!areWidgetsAttached())
-        return;
-
-    for (int ch = 0; ch < nCHANNELS; ch++)
-    {
-        m_pButtonPause[ch]->Set(false);
-        m_pButtonBiLevel[ch]->Set(false);
-    }
-
     memset(m_bPauseState, 0, sizeof(m_bPauseState));
     memset(m_bBiLevelState, 0, sizeof(m_bBiLevelState));
     memset(m_Pattern, 0, sizeof(m_Pattern));
@@ -592,16 +612,10 @@ void SEQ_6x32x16::onReset()
 
         m_MaxProg[ch] = nPROG - 1;
 
-        m_pPatternDisplay[ch]->SetPatAll(m_Pattern[ch][0]);
-        m_pPatternDisplay[ch]->SetMax(m_MaxPat[ch][0]);
-
-        m_pProgramDisplay[ch]->SetPat(0, false);
-        m_pProgramDisplay[ch]->SetMax(m_MaxProg[ch]);
-
-        m_pPatternDisplay[ch]->SetPatAll(m_Pattern[ch][m_CurrentProg[ch]]);
-
         ChangeProg(ch, 0, true);
     }
+
+    m_refreshWidgets = true;
 }
 
 //-----------------------------------------------------
@@ -619,9 +633,8 @@ void SEQ_6x32x16::onRandomize()
                 m_Pattern[ch][p][i] = (int)(random::uniform() * 5.0);
             }
         }
-
-        m_pPatternDisplay[ch]->SetPatAll(m_Pattern[ch][m_CurrentProg[ch]]);
     }
+    m_refreshWidgets = true;
 }
 
 //-----------------------------------------------------
@@ -638,7 +651,7 @@ void SEQ_6x32x16::Rand(int ch)
             m_Pattern[ch][m_CurrentProg[ch]][i] = 0;
     }
 
-    m_pPatternDisplay[ch]->SetPatAll(m_Pattern[ch][m_CurrentProg[ch]]);
+    m_refreshWidgets = true;
 }
 
 //-----------------------------------------------------
@@ -668,11 +681,7 @@ void SEQ_6x32x16::Copy(int ch, bool bOn)
 {
     if (!m_bPauseState[ch] || !bOn || m_CopySrc != NO_COPY)
     {
-        if (m_CopySrc != NO_COPY)
-            m_pButtonCopy[m_CopySrc]->Set(false);
-
         m_CopySrc = NO_COPY;
-        m_pButtonCopy[ch]->Set(false);
     }
     else if (bOn)
     {
@@ -686,6 +695,8 @@ void SEQ_6x32x16::Copy(int ch, bool bOn)
 //-----------------------------------------------------
 void SEQ_6x32x16::ChangeProg(int ch, int prog, bool bforce)
 {
+    m_refreshWidgets = true;
+
     if (ch < 0 || ch >= nCHANNELS)
         return;
 
@@ -703,17 +714,12 @@ void SEQ_6x32x16::ChangeProg(int ch, int prog, bool bforce)
         {
             memcpy(m_Pattern[ch][prog], m_Pattern[m_CopySrc][m_CurrentProg[m_CopySrc]],
                    sizeof(int) * nSTEPS);
-            m_pButtonCopy[m_CopySrc]->Set(false);
             m_MaxPat[ch][prog] = m_MaxPat[m_CopySrc][m_CurrentProg[m_CopySrc]];
             m_CopySrc = NO_COPY;
         }
     }
 
     m_CurrentProg[ch] = prog;
-
-    m_pPatternDisplay[ch]->SetPatAll(m_Pattern[ch][prog]);
-    m_pPatternDisplay[ch]->SetMax(m_MaxPat[ch][prog]);
-    m_pProgramDisplay[ch]->SetPat(prog, false);
 }
 
 //-----------------------------------------------------
@@ -734,8 +740,8 @@ void SEQ_6x32x16::SetPendingProg(int ch, int progIn)
 
     m_ProgPending[ch].bPending = true;
     m_ProgPending[ch].prog = prog;
-    m_pProgramDisplay[ch]->SetPat(m_CurrentProg[ch], false);
-    m_pProgramDisplay[ch]->SetPat(prog, true);
+    m_iPendingPattern[ch] = prog;
+    m_refreshWidgets = true;
 }
 
 //-----------------------------------------------------
@@ -750,20 +756,16 @@ void SEQ_6x32x16::process(const ProcessArgs &args)
                          bPatTrig[nCHANNELS] = {};
     float fout = 0.0;
 
-    if (!areWidgetsAttached())
-        return;
-
     if (inputs[IN_GLOBAL_TRIG_MUTE].isConnected())
     {
         if (inputs[IN_GLOBAL_TRIG_MUTE].getVoltage() >= 0.00001)
         {
             m_bTrigMute = true;
-            m_pButtonTrigMute->Set(true);
+            m_bTrigMuteCountdown = 5;
         }
         else if (inputs[IN_GLOBAL_TRIG_MUTE].getVoltage() < 0.00001)
         {
             m_bTrigMute = false;
-            m_pButtonTrigMute->Set(false);
         }
     }
 
@@ -794,7 +796,7 @@ void SEQ_6x32x16::process(const ProcessArgs &args)
             // time the clock tick
             if (bGlobalClk)
             {
-                m_pPatternDisplay[ch]->ClockReset();
+                ClockReset(ch);
                 bClkTrig = true;
                 bClockAtZero = true;
                 bClk = true;
@@ -816,9 +818,9 @@ void SEQ_6x32x16::process(const ProcessArgs &args)
                 if (bClk)
                 {
                     if (!bGlobalClk)
-                        bClockAtZero = m_pPatternDisplay[ch]->ClockInc();
+                        bClockAtZero = ClockInc(ch);
 
-                    bTrigOut = (m_Pattern[ch][m_CurrentProg[ch]][m_pPatternDisplay[ch]->m_PatClk]);
+                    bTrigOut = (m_Pattern[ch][m_CurrentProg[ch]][m_PatClk[ch]]);
                 }
             }
         }
@@ -841,14 +843,14 @@ void SEQ_6x32x16::process(const ProcessArgs &args)
             SetPendingProg(ch, -1);
             m_ProgPending[ch].bPending = false;
             ChangeProg(ch, m_ProgPending[ch].prog, true);
-            bTrigOut = (m_Pattern[ch][m_CurrentProg[ch]][m_pPatternDisplay[ch]->m_PatClk]);
+            bTrigOut = (m_Pattern[ch][m_CurrentProg[ch]][m_PatClk[ch]]);
         }
         // resolve pattern change
         else if (m_ProgPending[ch].bPending && bClockAtZero)
         {
             m_ProgPending[ch].bPending = false;
             ChangeProg(ch, m_ProgPending[ch].prog, false);
-            bTrigOut = (m_Pattern[ch][m_CurrentProg[ch]][m_pPatternDisplay[ch]->m_PatClk]);
+            bTrigOut = (m_Pattern[ch][m_CurrentProg[ch]][m_PatClk[ch]]);
         }
 
         // trigger the beat 0 output
@@ -870,7 +872,7 @@ void SEQ_6x32x16::process(const ProcessArgs &args)
         else
             outputs[OUT_TRIG + ch].setVoltage(0.0f);
 
-        level = m_Pattern[ch][m_CurrentProg[ch]][m_pPatternDisplay[ch]->m_PatClk];
+        level = m_Pattern[ch][m_CurrentProg[ch]][m_PatClk[ch]];
 
         // get actual level from knobs
         switch (level)

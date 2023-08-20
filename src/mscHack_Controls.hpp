@@ -1356,7 +1356,7 @@ struct SinglePatternClocked32 : OpaqueWidget
     //-----------------------------------------------------
     // Procedure:   ClockInc
     //-----------------------------------------------------
-    bool ClockInc(void)
+    bool ClockInc()
     {
         m_PatClk++;
 
@@ -1372,7 +1372,7 @@ struct SinglePatternClocked32 : OpaqueWidget
     //-----------------------------------------------------
     // Procedure:   ClockReset
     //-----------------------------------------------------
-    void ClockReset(void) { m_PatClk = 0; }
+    void ClockReset() { m_PatClk = 0; }
 
     //-----------------------------------------------------
     // Procedure:   SetMax
