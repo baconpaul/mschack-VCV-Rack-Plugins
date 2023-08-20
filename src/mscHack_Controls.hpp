@@ -2153,8 +2153,8 @@ struct Keyboard_3Oct_Widget : OpaqueWidget
     bool m_bInitialized = false;
     RGB_STRUCT m_rgb_white, m_rgb_black, m_rgb_on;
     int m_MaxMultKeys = 1;
-    int m_KeySave[MAX_MULT_KEYS] = {0};
-    bool m_bKeyOnList[nKEYS] = {false};
+    int m_KeySave[MAX_MULT_KEYS] = {};
+    bool m_bKeyOnList[nKEYS] = {};
     int m_nKeysOn = 0;
     int m_KeyOn = 0;
     RECT_STRUCT keyrects[nKEYS] = {};

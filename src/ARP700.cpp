@@ -124,18 +124,18 @@ struct ARP700 : Module
         STATE_TRIG_OFF
     };
 
-    bool m_bInitialized = false;
-
     // Contructor
     ARP700()
     {
         config(nPARAMS, nINPUTS, nOUTPUTS);
         m_Clock.fsynclen = 2.0 * 48.0; // default to 120bpm
         m_Clock.IgnoreClockCount = 2;
+        for (int i = 0; i < 37; i++)
+            m_fKeyNotes[i] = (float)i * SEMI;
 
         configInput(IN_CLOCK_TRIG, "Clock");
         configInput(IN_VOCT_OFF, "V/Oct Offset");
-        configInput(IN_PROG_CHANGE, "Program Change");
+        configInput(IN_PROG_CHANGE, "Pattern Advance Trigger");
         configInput(IN_CLOCK_RESET, "Clock Reset");
         configOutput(OUT_TRIG, "Trigger");
         configOutput(OUT_VOCTS, "V/Oct");
@@ -146,21 +146,9 @@ struct ARP700 : Module
     PAT_STEP_STRUCT m_PatCtrl = {};
 
     dsp::SchmittTrigger m_SchTrigPatternChange;
-    PatternSelectStrip *m_pPatternSelect = NULL;
-
     bool m_bCopySrc = false;
 
-    // pattern buttons
-    MyLEDButtonStrip *m_pButtonOnOff[MAX_ARP_NOTES][SUBSTEP_PER_NOTE] = {};
-    MyLEDButtonStrip *m_pButtonLen[MAX_ARP_NOTES][SUBSTEP_PER_NOTE] = {};
-    MyLEDButtonStrip *m_pButtonLenMod[MAX_ARP_NOTES][SUBSTEP_PER_NOTE] = {};
-    MyLEDButton *m_pButtonGlide[MAX_ARP_NOTES] = {};
-    MyLEDButton *m_pButtonTrig[MAX_ARP_NOTES] = {};
-    MyLEDButtonStrip *m_plastbut = NULL;
-    MyLEDButton *m_pButtonCopy = NULL;
-
     std::atomic<bool> m_refreshWidgets{false};
-    void doWidgetRefresh();
 
     // clock
     dsp::SchmittTrigger m_SchTrigClk;
@@ -171,19 +159,17 @@ struct ARP700 : Module
     bool m_GlobalClkResetPending = false;
 
     // keyboard
-    Keyboard_3Oct_Widget *pKeyboardWidget = NULL;
     float m_fKeyNotes[37];
     float m_VoctOffsetIn = 0;
+    std::atomic<int> m_kbHighlight{-1};
+    std::atomic<int> m_iPendingPattern{-1};
 
     // octave
-    MyLEDButtonStrip *m_pButtonOctaveSelect = NULL;
 
     // pause
     bool m_bPauseState = false;
-    MyLEDButton *m_pButtonPause = 0;
 
-    // mode
-    MyLEDButtonStrip *m_pButtonMode = 0;
+    int m_currStep{-1}, m_currSubstep{-1};
 
     // Overrides
     void JsonParams(bool bTo, json_t *root);
@@ -319,8 +305,15 @@ void ARP700_Widget_NoteChangeCallback(void *pClass, int kb, int notepressed, int
 
     memcpy(mymodule->m_PatternSave[mymodule->m_PatCtrl.pat].notes, pnotes,
            sizeof(int) * MAX_ARP_NOTES);
-    mymodule->m_PatternSave[mymodule->m_PatCtrl.pat].notesused =
-        mymodule->pKeyboardWidget->m_nKeysOn;
+
+    int nu{0};
+    for (int i=0; i<16; ++i)
+    {
+        if (pnotes[i] >= 0)
+            nu++;
+    }
+
+    mymodule->m_PatternSave[mymodule->m_PatCtrl.pat].notesused = nu;
 }
 
 //-----------------------------------------------------
@@ -331,7 +324,7 @@ void ARP700_Widget_PatternChangeCallback(void *pClass, int kb, int pat, int max)
 {
     ARP700 *mymodule = (ARP700 *)pClass;
 
-    if (!mymodule || !mymodule->m_bInitialized)
+    if (!mymodule)
         return;
 
     if (mymodule->m_PatCtrl.pat != pat)
@@ -352,12 +345,26 @@ void ARP700_Widget_PatternChangeCallback(void *pClass, int kb, int pat, int max)
 
 struct ARP700_Widget : ModuleWidget
 {
+    PatternSelectStrip *m_pPatternSelect = NULL;
+
+    // pattern buttons
+    MyLEDButtonStrip *m_pButtonOnOff[MAX_ARP_NOTES][SUBSTEP_PER_NOTE] = {};
+    MyLEDButtonStrip *m_pButtonLen[MAX_ARP_NOTES][SUBSTEP_PER_NOTE] = {};
+    MyLEDButtonStrip *m_pButtonLenMod[MAX_ARP_NOTES][SUBSTEP_PER_NOTE] = {};
+    MyLEDButton *m_pButtonGlide[MAX_ARP_NOTES] = {};
+    MyLEDButton *m_pButtonTrig[MAX_ARP_NOTES] = {};
+    MyLEDButtonStrip *m_plastbut = NULL;
+    MyLEDButton *m_pButtonCopy = NULL;
+
+    Keyboard_3Oct_Widget *pKeyboardWidget = NULL;
+    MyLEDButtonStrip *m_pButtonOctaveSelect = NULL;
+    MyLEDButton *m_pButtonPause = 0;
+    MyLEDButtonStrip *m_pButtonMode = 0;
+
 
     ARP700_Widget(ARP700 *module)
     {
         int x, y, note, param;
-        PModTempInstance<ARP700> pmod{module};
-
         // box.size = Vec( 15*27, 380);
 
         setModule(module);
@@ -370,40 +377,38 @@ struct ARP700_Widget : ModuleWidget
         addChild(createWidget<ScrewSilver>(Vec(15, 365)));
         addChild(createWidget<ScrewSilver>(Vec(box.size.x - 30, 365)));
 
-        for (int i = 0; i < 37; i++)
-            pmod->m_fKeyNotes[i] = (float)i * SEMI;
 
         // module->lg.Open("ARP700.txt");
 
         // pause button
-        pmod->m_pButtonPause =
+        m_pButtonPause =
             new MyLEDButton(75, 22, 11, 11, 8.0, DWRGB(180, 180, 180), DWRGB(255, 0, 0),
                             MyLEDButton::TYPE_SWITCH, 0, module, ARP700_Pause);
-        addChild(pmod->m_pButtonPause);
+        addChild(m_pButtonPause);
 
         // copy button
-        pmod->m_pButtonCopy =
+        m_pButtonCopy =
             new MyLEDButton(307, 22, 11, 11, 8.0, DWRGB(180, 180, 180), DWRGB(0, 255, 255),
                             MyLEDButton::TYPE_SWITCH, 0, module, ARP700_Copy);
-        addChild(pmod->m_pButtonCopy);
+        addChild(m_pButtonCopy);
 
         // keyboard widget
-        pmod->pKeyboardWidget =
+        pKeyboardWidget =
             new Keyboard_3Oct_Widget(75, 38, MAX_ARP_NOTES, 0, DWRGB(255, 128, 64), module,
                                      ARP700_Widget_NoteChangeCallback);
-        addChild(pmod->pKeyboardWidget);
+        addChild(pKeyboardWidget);
 
         // octave select
-        pmod->m_pButtonOctaveSelect = new MyLEDButtonStrip(
+        m_pButtonOctaveSelect = new MyLEDButtonStrip(
             307, 104, 11, 11, 3, 8.0, 4, false, DWRGB(180, 180, 180), DWRGB(0, 255, 255),
             MyLEDButtonStrip::TYPE_EXCLUSIVE, 0, module, ARP700_OctSelect);
-        addChild(pmod->m_pButtonOctaveSelect);
+        addChild(m_pButtonOctaveSelect);
 
         // pattern selects
-        pmod->m_pPatternSelect = new PatternSelectStrip(
+        m_pPatternSelect = new PatternSelectStrip(
             75, 104, 9, 7, DWRGB(200, 200, 200), DWRGB(40, 40, 40), DWRGB(112, 104, 102),
             DWRGB(40, 40, 40), MAX_ARP_PATTERNS, 0, module, ARP700_Widget_PatternChangeCallback);
-        addChild(pmod->m_pPatternSelect);
+        addChild(m_pPatternSelect);
 
         x = 60;
 
@@ -413,46 +418,46 @@ struct ARP700_Widget : ModuleWidget
             {
                 y = 140;
 
-                pmod->m_pButtonOnOff[note][param] = new MyLEDButtonStrip(
+                m_pButtonOnOff[note][param] = new MyLEDButtonStrip(
                     x, y, 12, 12, 2, 10.0, 3, true, DWRGB(180, 180, 180), DWRGB(255, 0, 0),
                     MyLEDButtonStrip::TYPE_EXCLUSIVE, (note * SUBSTEP_PER_NOTE) + param, module,
                     ARP700_NoteOnOff);
-                addChild(pmod->m_pButtonOnOff[note][param]);
+                addChild(m_pButtonOnOff[note][param]);
 
-                pmod->m_pButtonOnOff[note][param]->SetLEDCol(1, DWRGB(0, 255, 0));
-                pmod->m_pButtonOnOff[note][param]->SetLEDCol(2, DWRGB(255, 255, 0));
+                m_pButtonOnOff[note][param]->SetLEDCol(1, DWRGB(0, 255, 0));
+                m_pButtonOnOff[note][param]->SetLEDCol(2, DWRGB(255, 255, 0));
 
                 y += 43;
 
-                pmod->m_pButtonLen[note][param] = new MyLEDButtonStrip(
+                m_pButtonLen[note][param] = new MyLEDButtonStrip(
                     x, y, 12, 12, 2, 10.0, 6, true, DWRGB(180, 180, 180), DWRGB(255, 128, 0),
                     MyLEDButtonStrip::TYPE_EXCLUSIVE, (note * SUBSTEP_PER_NOTE) + param, module,
                     ARP700_NoteLenSelect);
-                addChild(pmod->m_pButtonLen[note][param]);
+                addChild(m_pButtonLen[note][param]);
 
                 y += 89;
 
-                pmod->m_pButtonLenMod[note][param] =
+                m_pButtonLenMod[note][param] =
                     new MyLEDButtonStrip(x, y, 12, 12, 2, 10.0, 3, true, DWRGB(180, 180, 180),
                                          DWRGB(255, 128, 0), MyLEDButtonStrip::TYPE_EXCLUSIVE_WOFF,
                                          (note * SUBSTEP_PER_NOTE) + param, module, ARP700_mod);
-                addChild(pmod->m_pButtonLenMod[note][param]);
+                addChild(m_pButtonLenMod[note][param]);
 
                 if (param == 1)
                 {
                     y += 43;
 
-                    pmod->m_pButtonGlide[note] = new MyLEDButton(
+                    m_pButtonGlide[note] = new MyLEDButton(
                         x, y, 12, 12, 10.0, DWRGB(180, 180, 180), DWRGB(0, 255, 255),
                         MyLEDButton::TYPE_SWITCH, note, module, ARP700_Glide);
-                    addChild(pmod->m_pButtonGlide[note]);
+                    addChild(m_pButtonGlide[note]);
 
                     y += 16;
 
-                    pmod->m_pButtonTrig[note] = new MyLEDButton(
+                    m_pButtonTrig[note] = new MyLEDButton(
                         x, y, 12, 12, 10.0, DWRGB(180, 180, 180), DWRGB(0, 255, 255),
                         MyLEDButton::TYPE_SWITCH, note, module, ARP700_Trig);
-                    addChild(pmod->m_pButtonTrig[note]);
+                    addChild(m_pButtonTrig[note]);
                 }
 
                 x += 14;
@@ -478,16 +483,10 @@ struct ARP700_Widget : ModuleWidget
         addInput(createInput<MyPortInSmall>(Vec(14, 21), module, ARP700::IN_CLOCK_RESET));
 
         // mode buttons
-        pmod->m_pButtonMode = new MyLEDButtonStrip(
+        m_pButtonMode = new MyLEDButtonStrip(
             154, 360, 12, 12, 7, 10.0, 7, false, DWRGB(180, 180, 180), DWRGB(255, 255, 0),
             MyLEDButtonStrip::TYPE_EXCLUSIVE, 0, module, ARP700_ModeSelect);
-        addChild(pmod->m_pButtonMode);
-
-        if (module)
-        {
-            module->m_bInitialized = true;
-            module->doWidgetRefresh();
-        }
+        addChild(m_pButtonMode);
     }
 
     void step() override
@@ -497,8 +496,56 @@ struct ARP700_Widget : ModuleWidget
         {
             if (az->m_refreshWidgets)
             {
-                az->doWidgetRefresh();
+                az->m_refreshWidgets = false;
+                m_pButtonPause->Set(az->m_bPauseState);
+                pKeyboardWidget->setkey(az->m_PatternSave[az->m_PatCtrl.pat].notes);
+
+                // This is unlikely to be correct
+                az->ChangePattern(az->m_PatCtrl.pat, true);
+                az->ArpStep(true);
             }
+
+            for (auto note = 0; note < MAX_ARP_NOTES; note++)
+            {
+                m_pButtonGlide[note]->Set(az->m_PatternSave[az->m_PatCtrl.pat].glide[note]);
+                m_pButtonTrig[note]->Set(az->m_PatternSave[az->m_PatCtrl.pat].legato[note]);
+
+                for (auto param = 0; param < SUBSTEP_PER_NOTE; param++)
+                {
+                    m_pButtonOnOff[note][param]->Set(az->m_PatternSave[az->m_PatCtrl.pat].onoffsel[note][param],
+                                                     true);
+                    m_pButtonLen[note][param]->Set(az->m_PatternSave[az->m_PatCtrl.pat].lensel[note][param], true);
+                    m_pButtonLenMod[note][param]->Set(az->m_PatternSave[az->m_PatCtrl.pat].lenmod[note][param],
+                                                      true);
+                }
+            }
+            m_pButtonOctaveSelect->Set(az->m_PatternSave[az->m_PatCtrl.pat].oct, true);
+            m_pButtonMode->Set(az->m_PatternSave[az->m_PatCtrl.pat].mode, true);
+            m_pPatternSelect->SetPat(az->m_PatCtrl.pat , false);
+            m_pPatternSelect->SetMax(az->m_PatCtrl.used);
+
+            // set keyboard keys
+            pKeyboardWidget->setkey(az->m_PatternSave[az->m_PatCtrl.pat].notes);
+            if (az->m_kbHighlight >= 0)
+                pKeyboardWidget->setkeyhighlight(az->m_kbHighlight);
+
+            if (m_plastbut)
+                m_plastbut->SetHiLightOn(-1);
+
+            auto nstep = az->m_currStep;
+            auto substep = az->m_currSubstep;
+            if (nstep >=0 && substep >= 0)
+            {
+                m_pButtonLen[nstep][substep]->SetHiLightOn(
+                    az->m_PatternSave[az->m_PatCtrl.pat].lensel[nstep][substep]);
+                m_plastbut = m_pButtonLen[nstep][substep];
+            }
+
+            if (az->m_iPendingPattern >= 0)
+            {
+                m_pPatternSelect->SetPat(az->m_iPendingPattern, true);
+            }
+            m_pButtonCopy->Set(az->m_bCopySrc);
         }
         Widget::step();
     }
@@ -540,24 +587,7 @@ void ARP700::dataFromJson(json_t *root)
 {
     JsonParams(FROMJSON, root);
 
-    if (pKeyboardWidget)
-    {
-        doWidgetRefresh();
-    }
-    else
-    {
-        m_refreshWidgets = true;
-    }
-}
-
-void ARP700::doWidgetRefresh()
-{
-    m_refreshWidgets = false;
-    m_pButtonPause->Set(m_bPauseState);
-    pKeyboardWidget->setkey(m_PatternSave[m_PatCtrl.pat].notes);
-
-    ChangePattern(m_PatCtrl.pat, true);
-    ArpStep(true);
+    m_refreshWidgets = true;
 }
 
 //-----------------------------------------------------
@@ -567,11 +597,6 @@ void ARP700::doWidgetRefresh()
 void ARP700::onReset()
 {
     int pat, note;
-
-    if (!m_bInitialized)
-        return;
-
-    m_pButtonOctaveSelect->Set(0, true);
 
     m_PatCtrl.fCvStartOut = 0;
     m_PatCtrl.fCvEndOut = 0;
@@ -616,7 +641,7 @@ void ARP700::SetOut(void)
     if (m_PatternSave[m_PatCtrl.pat].onoffsel[nstep][substep] == ARP_ON)
     {
         note = m_PatternSave[m_PatCtrl.pat].notes[nstep];
-        pKeyboardWidget->setkeyhighlight(note);
+        m_kbHighlight = note;
     }
     else
         return;
@@ -674,8 +699,7 @@ void ARP700::SetPendingPattern(int patin)
 
     m_PatCtrl.pending.bPending = true;
     m_PatCtrl.pending.pat = pattern;
-    m_pPatternSelect->SetPat(m_PatCtrl.pat, false);
-    m_pPatternSelect->SetPat(pattern, true);
+    m_iPendingPattern = pattern;
 }
 
 //-----------------------------------------------------
@@ -687,7 +711,6 @@ void ARP700::Copy(bool bOn)
     if (!m_bPauseState || !bOn)
     {
         m_bCopySrc = false;
-        m_pButtonCopy->Set(false);
     }
     else if (bOn)
     {
@@ -718,35 +741,14 @@ void ARP700::ChangePattern(int index, bool bForce)
         {
             memcpy(&m_PatternSave[index], &m_PatternSave[m_PatCtrl.pat],
                    sizeof(ARP_PATTERN_STRUCT));
-            m_pButtonCopy->Set(false);
+            // m_pButtonCopy->Set(false);
             m_bCopySrc = false;
         }
     }
 
     m_PatCtrl.pat = index;
 
-    for (note = 0; note < MAX_ARP_NOTES; note++)
-    {
-        m_pButtonGlide[note]->Set(m_PatternSave[m_PatCtrl.pat].glide[note]);
-        m_pButtonTrig[note]->Set(m_PatternSave[m_PatCtrl.pat].legato[note]);
 
-        for (param = 0; param < SUBSTEP_PER_NOTE; param++)
-        {
-            m_pButtonOnOff[note][param]->Set(m_PatternSave[m_PatCtrl.pat].onoffsel[note][param],
-                                             true);
-            m_pButtonLen[note][param]->Set(m_PatternSave[m_PatCtrl.pat].lensel[note][param], true);
-            m_pButtonLenMod[note][param]->Set(m_PatternSave[m_PatCtrl.pat].lenmod[note][param],
-                                              true);
-        }
-    }
-
-    m_pButtonOctaveSelect->Set(m_PatternSave[m_PatCtrl.pat].oct, true);
-    m_pButtonMode->Set(m_PatternSave[m_PatCtrl.pat].mode, true);
-    m_pPatternSelect->SetPat(index, false);
-    m_pPatternSelect->SetMax(m_PatCtrl.used);
-
-    // set keyboard keys
-    pKeyboardWidget->setkey(m_PatternSave[m_PatCtrl.pat].notes);
 }
 
 //-----------------------------------------------------
@@ -839,11 +841,8 @@ stepfound:
     nstep = m_PatCtrl.step / SUBSTEP_PER_NOTE;
     substep = m_PatCtrl.step - (nstep * SUBSTEP_PER_NOTE);
 
-    if (m_plastbut)
-        m_plastbut->SetHiLightOn(-1);
-
-    m_pButtonLen[nstep][substep]->SetHiLightOn(m_PatternSave[m_PatCtrl.pat].lensel[nstep][substep]);
-    m_plastbut = m_pButtonLen[nstep][substep];
+    m_currStep = nstep;
+    m_currSubstep = substep;
 
     // next step length
     m_PatCtrl.nextcount = fbasenotelen[m_PatternSave[m_PatCtrl.pat].lensel[nstep][substep]];
@@ -880,9 +879,6 @@ stepfound:
 void ARP700::process(const ProcessArgs &args)
 {
     bool bSyncTick = false, bResetClk = false;
-
-    if (!m_bInitialized)
-        return;
 
     if (!inputs[IN_CLOCK_TRIG].isConnected())
     {
@@ -968,7 +964,9 @@ void ARP700::process(const ProcessArgs &args)
             m_PatCtrl.bTrig = false;
 
         else if (m_PatCtrl.nextcount <= 0)
+        {
             ArpStep(bResetClk);
+        }
     }
 
     outputs[OUT_TRIG].setVoltage(m_PatCtrl.bTrig ? CV_MAX10 : 0.0);
