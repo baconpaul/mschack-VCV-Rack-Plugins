@@ -136,7 +136,7 @@ struct SEQ_Envelope_8 : Module
             mymodule = (SEQ_Envelope_8 *)paramQuantity->module;
 
             if (mymodule)
-                mymodule->m_pEnvelope->m_fband = paramQuantity->getValue();
+                mymodule->m_pEnvelope->m_EditData.m_fband = paramQuantity->getValue();
 
             RoundKnob::onChange(e);
         }
@@ -193,7 +193,7 @@ void SEQ_Envelope_8_DrawMode(void *pClass, int id, bool bOn)
         return;
 
     mymodule = (SEQ_Envelope_8 *)pClass;
-    mymodule->m_pEnvelope->m_bDraw = bOn;
+    mymodule->m_pEnvelope->m_EditData.m_bDraw = bOn;
 }
 
 //-----------------------------------------------------
@@ -757,7 +757,7 @@ void SEQ_Envelope_8::process(const ProcessArgs &args)
         return;
 
     // global clock reset
-    m_pEnvelope->m_bClkReset =
+    m_pEnvelope->m_EditData.m_bClkReset =
         m_SchTrigGlobalClkReset.process(inputs[INPUT_CLK_RESET].getNormalVoltage(0.0f));
 
     m_BeatCount++;
@@ -802,7 +802,7 @@ void SEQ_Envelope_8::process(const ProcessArgs &args)
         m_bTrig[ch] = false;
     }
 
-    m_pEnvelope->m_bClkReset = false;
+    m_pEnvelope->m_EditData.m_bClkReset = false;
 }
 
 Model *modelSEQ_Envelope_8 = createModel<SEQ_Envelope_8, SEQ_Envelope_8_Widget>("SEQ_Envelope_8");

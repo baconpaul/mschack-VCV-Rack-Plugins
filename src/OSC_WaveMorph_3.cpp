@@ -118,7 +118,7 @@ struct OSC_WaveMorph_3 : Module
             mymodule = (OSC_WaveMorph_3 *)paramQuantity->module;
 
             if (mymodule)
-                mymodule->m_pEnvelope->m_fband = paramQuantity->getValue();
+                mymodule->m_pEnvelope->m_EditData.m_fband = paramQuantity->getValue();
 
             RoundKnob::onChange(e);
         }
@@ -161,7 +161,7 @@ void OSC_WaveMorph_3_DrawMode(void *pClass, int id, bool bOn)
 {
     OSC_WaveMorph_3 *mymodule;
     mymodule = (OSC_WaveMorph_3 *)pClass;
-    mymodule->m_pEnvelope->m_bDraw = bOn;
+    mymodule->m_pEnvelope->m_EditData.m_bDraw = bOn;
 }
 
 //-----------------------------------------------------

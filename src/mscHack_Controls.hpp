@@ -217,17 +217,21 @@ struct Widget_EnvelopeEdit : OpaqueWidget
     float m_divw = 0;
     float m_handleSize = 0, m_handleSizeD2;
     int m_currentChannel = 0;
-    float m_fband = 0.0f;
 
     int m_MaxChannels;
 
-    bool m_bDraw = false;
     int m_Dragi = 0;
     float m_Dragx = 0;
     float m_Dragy = 0;
 
-    bool m_bClkReset = false;
     int m_BeatLen = 0;
+
+    struct EditData
+    {
+        float m_fband = 0.0f;
+        bool m_bDraw = false;
+        bool m_bClkReset = false;
+    } m_EditData;
 
     RGB_STRUCT m_HandleCol[ENVELOPE_HANDLES];
 

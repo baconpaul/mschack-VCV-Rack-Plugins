@@ -417,7 +417,7 @@ void Widget_EnvelopeEdit::onButton(const event::Button &e)
 //-----------------------------------------------------
 void Widget_EnvelopeEdit::onDragStart(const event::DragStart &e)
 {
-    if (e.button == GLFW_MOUSE_BUTTON_LEFT && !m_bDraw)
+    if (e.button == GLFW_MOUSE_BUTTON_LEFT && !m_EditData.m_bDraw)
         m_EnvData[m_currentChannel].m_HandleVal[m_Dragi] =
             1.0f - clamp((m_Dragy / box.size.y), 0.0f, 1.0f);
 }
@@ -442,7 +442,7 @@ void Widget_EnvelopeEdit::onDragMove(const event::DragMove &e)
     m_Dragy += e.mouseDelta.y / APP->scene->rackScroll->zoomWidget->zoom;
     m_Dragx += e.mouseDelta.x / APP->scene->rackScroll->zoomWidget->zoom;
 
-    if (!m_bDraw)
+    if (!m_EditData.m_bDraw)
     {
         // Drag slower if Mod is held
         if (m_bCtrl)
@@ -465,9 +465,9 @@ void Widget_EnvelopeEdit::onDragMove(const event::DragMove &e)
             m_pCallback(m_pClass, m_EnvData[m_currentChannel].getActualVal(
                                       m_EnvData[m_currentChannel].m_HandleVal[m_Dragi]));
 
-        if (m_fband > 0.0001)
+        if (m_EditData.m_fband > 0.0001)
         {
-            fband = m_fband;
+            fband = m_EditData.m_fband;
 
             for (h = -1; h > -4; h--)
             {
@@ -482,7 +482,7 @@ void Widget_EnvelopeEdit::onDragMove(const event::DragMove &e)
                 fband *= 0.6f;
             }
 
-            fband = m_fband;
+            fband = m_EditData.m_fband;
 
             for (h = 1; h < 4; h++)
             {
@@ -571,7 +571,7 @@ void Widget_EnvelopeEdit::setBeatLen(int len)
 //-----------------------------------------------------
 float Widget_EnvelopeEdit::procStep(int ch, bool bTrig, bool bHold)
 {
-    if ((m_bClkReset || bTrig) && !bHold)
+    if ((m_EditData.m_bClkReset || bTrig) && !bHold)
     {
         if (m_EnvData[ch].m_Mode == EnvelopeData::MODE_REVERSE)
             m_EnvData[ch].m_Clock.fpos = APP->engine->getSampleRate();
