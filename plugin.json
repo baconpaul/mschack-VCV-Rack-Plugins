@@ -4,13 +4,13 @@
   "license": "BSD-3-Clause",
   "name": "mscHack",
   "brand": "mscHack",
-  "author": "mscHack",
+  "author": "mscHack (Rack2 port @pgatt / @baconpaul)",
   "authorEmail": "",
-  "pluginUrl": "https://github.com/mschack/VCV-Rack-Plugins/blob/master/README.md",
+  "pluginUrl": "https://github.com/baconpaul/mschack-VCV-Rack-Plugins/blob/master/README.md",
   "authorUrl": "",
   "manualUrl": "",
-  "sourceUrl": "https://github.com/mschack/VCV-Rack-Plugins",
-  "changelogUrl": "https://github.com/mschack/VCV-Rack-Plugins",
+  "sourceUrl": "https://github.com/baconpaul/mschack-VCV-Rack-Plugins",
+  "changelogUrl": "https://github.com/baconpaul/mschack-VCV-Rack-Plugins",
 
   "modules": [
     {
