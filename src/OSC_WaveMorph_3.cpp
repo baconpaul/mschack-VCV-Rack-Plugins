@@ -55,7 +55,8 @@ struct OSC_WaveMorph_3 : Module
         configParam(PARAM_LEVEL, 0.0, 1.0, 0.0, "Level Out");
         configParam(PARAM_CUTOFF, 0.0, 0.1, 0.0, "Filter Cutoff");
         configParam(PARAM_RES, 0.0, 1.0, 0.0, "Filter Resonance");
-        configParam(PARAM_FILTER_MODE, 0.0, 4.0, 0.0, "Filter Mode");
+        configSwitch(PARAM_FILTER_MODE, 0.0, 4.0, 0.0, "Filter Mode",
+                     {"Off", "Low Pass", "High Pass", "Band Pass", "Notch"});
 
         configInput(INPUT_VOCT, "V/Oct");
         configInput(INPUT_MORPHCV, "Morph CV");
@@ -77,22 +78,7 @@ struct OSC_WaveMorph_3 : Module
 
     dsp::SchmittTrigger m_SchmittChangeWave;
 
-    Widget_EnvelopeEdit *m_pEnvelope = NULL;
-    MyLEDButtonStrip *m_pButtonChSelect = NULL;
-
-    MyLEDButton *m_pButtonWaveSetBck = NULL;
-    MyLEDButton *m_pButtonWaveSetFwd = NULL;
-
-    MyLEDButton *m_pButtonDraw = NULL;
-    MyLEDButton *m_pButtonCopy = NULL;
-    MyLEDButton *m_pButtonRand = NULL;
-    MyLEDButton *m_pButtonInvert = NULL;
-    MyLEDButton *m_pButtonSolo = NULL;
-
-    Label *m_pTextLabel = NULL;
-
     std::atomic<bool> m_refreshWidgets{false};
-    void doWidgetRefresh();
 
     // filter
     enum FILTER_TYPES
@@ -122,7 +108,7 @@ struct OSC_WaveMorph_3 : Module
             mymodule = (OSC_WaveMorph_3 *)paramQuantity->module;
 
             if (mymodule)
-                mymodule->m_pEnvelope->m_EditData->m_fband = paramQuantity->getValue();
+                mymodule->m_EditData->m_fband = paramQuantity->getValue();
 
             RoundKnob::onChange(e);
         }
@@ -155,7 +141,8 @@ void OSC_WaveMorph_3_EnvelopeEditCALLBACK(void *pClass, float val)
 
     snprintf(strVal, 10, "[%.3fV]", val);
 
-    mymodule->m_pTextLabel->text = strVal;
+    // FIXME
+    // mymodule->m_pTextLabel->text = strVal;
 }
 
 //-----------------------------------------------------
@@ -165,7 +152,8 @@ void OSC_WaveMorph_3_DrawMode(void *pClass, int id, bool bOn)
 {
     OSC_WaveMorph_3 *mymodule;
     mymodule = (OSC_WaveMorph_3 *)pClass;
-    mymodule->m_pEnvelope->m_EditData->m_bDraw = bOn;
+    mymodule->m_EditData->m_bDraw = bOn;
+    mymodule->m_refreshWidgets = true;
 }
 
 //-----------------------------------------------------
@@ -176,6 +164,7 @@ void OSC_WaveMorph_3_Solo(void *pClass, int id, bool bOn)
     OSC_WaveMorph_3 *mymodule;
     mymodule = (OSC_WaveMorph_3 *)pClass;
     mymodule->m_bSolo = bOn;
+    mymodule->m_refreshWidgets = true;
 }
 
 //-----------------------------------------------------
@@ -208,7 +197,8 @@ void OSC_WaveMorph_3_WaveSet(void *pClass, int id, bool bOn)
             mymodule->m_waveSet = EnvelopeData::nPRESETS - 1;
     }
 
-    mymodule->m_pEnvelope->m_EditData->m_EnvData[mymodule->m_CurrentChannel].Preset(mymodule->m_waveSet);
+    mymodule->m_EditData->m_EnvData[mymodule->m_CurrentChannel].Preset(mymodule->m_waveSet);
+    mymodule->m_refreshWidgets = true;
 }
 
 //-----------------------------------------------------
@@ -221,9 +211,9 @@ void OSC_WaveMorph_3_WaveInvert(void *pClass, int id, bool bOn)
     mymodule = (OSC_WaveMorph_3 *)pClass;
 
     for (i = 0; i < ENVELOPE_HANDLES; i++)
-        mymodule->m_pEnvelope->setVal(
-            mymodule->m_CurrentChannel, i,
-            1.0f - mymodule->m_pEnvelope->m_EditData->m_EnvData[mymodule->m_CurrentChannel].m_HandleVal[i]);
+        mymodule->m_EditData->m_EnvData[id].setVal(
+            i, 1.0f - mymodule->m_EditData->m_EnvData[mymodule->m_CurrentChannel].m_HandleVal[i]);
+    mymodule->m_refreshWidgets = true;
 }
 
 //-----------------------------------------------------
@@ -236,7 +226,8 @@ void OSC_WaveMorph_3_WaveRand(void *pClass, int id, bool bOn)
     mymodule = (OSC_WaveMorph_3 *)pClass;
 
     for (i = 0; i < ENVELOPE_HANDLES; i++)
-        mymodule->m_pEnvelope->setVal(mymodule->m_CurrentChannel, i, random::uniform());
+        mymodule->m_EditData->m_EnvData[id].setVal(i, random::uniform());
+    mymodule->m_refreshWidgets = true;
 }
 
 //-----------------------------------------------------
@@ -248,6 +239,7 @@ void OSC_WaveMorph_3_WaveCopy(void *pClass, int id, bool bOn)
     mymodule = (OSC_WaveMorph_3 *)pClass;
 
     mymodule->m_bCpy = bOn;
+    mymodule->m_refreshWidgets = true;
 }
 
 std::weak_ptr<Widget_EnvelopeEdit::EditData> O3W_browserEditData;
@@ -258,11 +250,22 @@ std::weak_ptr<Widget_EnvelopeEdit::EditData> O3W_browserEditData;
 
 struct OSC_WaveMorph_3_Widget : ModuleWidget
 {
+    Widget_EnvelopeEdit *m_pEnvelope = NULL;
+    MyLEDButtonStrip *m_pButtonChSelect = NULL;
+
+    MyLEDButton *m_pButtonWaveSetBck = NULL;
+    MyLEDButton *m_pButtonWaveSetFwd = NULL;
+
+    MyLEDButton *m_pButtonDraw = NULL;
+    MyLEDButton *m_pButtonCopy = NULL;
+    MyLEDButton *m_pButtonRand = NULL;
+    MyLEDButton *m_pButtonInvert = NULL;
+    MyLEDButton *m_pButtonSolo = NULL;
+
+    Label *m_pTextLabel = NULL;
 
     OSC_WaveMorph_3_Widget(OSC_WaveMorph_3 *module)
     {
-        PModTempInstance<OSC_WaveMorph_3> pmod{module};
-
         setModule(module);
 
         // box.size = Vec( 15*16, 380 );
@@ -280,10 +283,10 @@ struct OSC_WaveMorph_3_Widget : ModuleWidget
         addInput(createInput<MyPortInSmall>(Vec(14, 311), module, OSC_WaveMorph_3::INPUT_MORPHCV));
 
         // invert
-        pmod->m_pButtonInvert =
+        m_pButtonInvert =
             new MyLEDButton(88, 31, 11, 11, 8.0, DWRGB(180, 180, 180), DWRGB(0, 255, 255),
                             MyLEDButton::TYPE_MOMENTARY, 0, module, OSC_WaveMorph_3_WaveInvert);
-        addChild(pmod->m_pButtonInvert);
+        addChild(m_pButtonInvert);
 
         // envelope editor
         std::shared_ptr<Widget_EnvelopeEdit::EditData> ed;
@@ -303,63 +306,63 @@ struct OSC_WaveMorph_3_Widget : ModuleWidget
                 O3W_browserEditData = ed;
             }
         }
-        pmod->m_pEnvelope = new Widget_EnvelopeEdit(
-            16, 47, 208, 96, 5, ed, module, OSC_WaveMorph_3_EnvelopeEditCALLBACK, nCHANNELS);
-        addChild(pmod->m_pEnvelope);
+        m_pEnvelope = new Widget_EnvelopeEdit(16, 47, 208, 96, 5, ed, module,
+                                              OSC_WaveMorph_3_EnvelopeEditCALLBACK, nCHANNELS);
+        addChild(m_pEnvelope);
 
-        pmod->m_pEnvelope->m_EditData->m_EnvData[0].m_Range = EnvelopeData::RANGE_Audio;
-        pmod->m_pEnvelope->m_EditData->m_EnvData[1].m_Range = EnvelopeData::RANGE_Audio;
-        pmod->m_pEnvelope->m_EditData->m_EnvData[2].m_Range = EnvelopeData::RANGE_Audio;
+        m_pEnvelope->m_EditData->m_EnvData[0].m_Range = EnvelopeData::RANGE_Audio;
+        m_pEnvelope->m_EditData->m_EnvData[1].m_Range = EnvelopeData::RANGE_Audio;
+        m_pEnvelope->m_EditData->m_EnvData[2].m_Range = EnvelopeData::RANGE_Audio;
 
         // solo button
-        pmod->m_pButtonSolo =
+        m_pButtonSolo =
             new MyLEDButton(158, 146, 11, 11, 8.0, DWRGB(180, 180, 180), DWRGB(0, 255, 0),
                             MyLEDButton::TYPE_SWITCH, 0, module, OSC_WaveMorph_3_Solo);
-        addChild(pmod->m_pButtonSolo);
+        addChild(m_pButtonSolo);
 
         // wave change (when soloing) cv input
         addInput(
             createInput<MyPortInSmall>(Vec(131, 144), module, OSC_WaveMorph_3::IN_WAVE_CHANGE));
 
         // envelope select buttons
-        pmod->m_pButtonChSelect = new MyLEDButtonStrip(
+        m_pButtonChSelect = new MyLEDButtonStrip(
             183, 146, 11, 11, 3, 8.0, nCHANNELS, false, DWRGB(180, 180, 180), DWRGB(0, 255, 255),
             MyLEDButtonStrip::TYPE_EXCLUSIVE, 0, module, OSC_WaveMorph_3_ChSelect);
-        addChild(pmod->m_pButtonChSelect);
+        addChild(m_pButtonChSelect);
 
-        pmod->m_pTextLabel = new Label();
-        pmod->m_pTextLabel->box.pos = Vec(150, 4);
-        pmod->m_pTextLabel->text = "----";
-        addChild(pmod->m_pTextLabel);
+        m_pTextLabel = new Label();
+        m_pTextLabel->box.pos = Vec(150, 4);
+        m_pTextLabel->text = "----";
+        addChild(m_pTextLabel);
 
         // wave set buttons
-        pmod->m_pButtonWaveSetBck =
+        m_pButtonWaveSetBck =
             new MyLEDButton(122, 31, 11, 11, 8.0, DWRGB(180, 180, 180), DWRGB(0, 255, 255),
                             MyLEDButton::TYPE_MOMENTARY, 0, module, OSC_WaveMorph_3_WaveSet);
-        addChild(pmod->m_pButtonWaveSetBck);
+        addChild(m_pButtonWaveSetBck);
 
-        pmod->m_pButtonWaveSetFwd =
+        m_pButtonWaveSetFwd =
             new MyLEDButton(134, 31, 11, 11, 8.0, DWRGB(180, 180, 180), DWRGB(0, 255, 255),
                             MyLEDButton::TYPE_MOMENTARY, 1, module, OSC_WaveMorph_3_WaveSet);
-        addChild(pmod->m_pButtonWaveSetFwd);
+        addChild(m_pButtonWaveSetFwd);
 
         // random
-        pmod->m_pButtonRand =
+        m_pButtonRand =
             new MyLEDButton(163, 31, 11, 11, 8.0, DWRGB(180, 180, 180), DWRGB(0, 255, 255),
                             MyLEDButton::TYPE_MOMENTARY, 0, module, OSC_WaveMorph_3_WaveRand);
-        addChild(pmod->m_pButtonRand);
+        addChild(m_pButtonRand);
 
         // copy
-        pmod->m_pButtonCopy =
+        m_pButtonCopy =
             new MyLEDButton(188, 31, 11, 11, 8.0, DWRGB(180, 180, 180), DWRGB(0, 255, 255),
                             MyLEDButton::TYPE_SWITCH, 0, module, OSC_WaveMorph_3_WaveCopy);
-        addChild(pmod->m_pButtonCopy);
+        addChild(m_pButtonCopy);
 
         // draw mode
-        pmod->m_pButtonDraw =
+        m_pButtonDraw =
             new MyLEDButton(17, 145, 11, 11, 8.0, DWRGB(180, 180, 180), DWRGB(255, 128, 0),
                             MyLEDButton::TYPE_SWITCH, 0, module, OSC_WaveMorph_3_DrawMode);
-        addChild(pmod->m_pButtonDraw);
+        addChild(m_pButtonDraw);
 
         // band knob
         addParam(createParam<OSC_WaveMorph_3::Band_Knob>(Vec(60, 145), module,
@@ -386,7 +389,7 @@ struct OSC_WaveMorph_3_Widget : ModuleWidget
         if (module)
         {
             module->m_bInitialized = true;
-            module->doWidgetRefresh();
+            module->m_refreshWidgets = true;
         }
     }
 
@@ -397,7 +400,15 @@ struct OSC_WaveMorph_3_Widget : ModuleWidget
         {
             if (az->m_refreshWidgets)
             {
-                az->doWidgetRefresh();
+                az->m_refreshWidgets = false;
+                // FIXME
+                // m_pEnvelope->setDataAll((int *)m_GraphData);
+
+                m_pButtonSolo->Set(az->m_bSolo);
+                m_pButtonCopy->Set(az->m_bCpy);
+
+                m_pButtonChSelect->Set(az->m_CurrentChannel, true);
+                m_pEnvelope->setView(az->m_CurrentChannel);
             }
         }
         Widget::step();
@@ -425,7 +436,7 @@ json_t *OSC_WaveMorph_3::dataToJson()
     if (!root)
         return NULL;
 
-    m_pEnvelope->getDataAll((int *)m_GraphData);
+    m_EditData->getDataAll((int *)m_GraphData);
 
     JsonParams(TOJSON, root);
 
@@ -440,24 +451,9 @@ void OSC_WaveMorph_3::dataFromJson(json_t *root)
 {
     JsonParams(FROMJSON, root);
 
-    if (m_pEnvelope)
-    {
-        doWidgetRefresh();
-    }
-    else
-    {
-        m_refreshWidgets = true;
-    }
-}
-
-void OSC_WaveMorph_3::doWidgetRefresh()
-{
-    m_refreshWidgets = false;
-    m_pEnvelope->setDataAll((int *)m_GraphData);
-
-    m_pButtonSolo->Set(m_bSolo);
-
+    m_EditData->setDataAll((int *)m_GraphData);
     ChangeChannel(0);
+    m_refreshWidgets = true;
 }
 
 //-----------------------------------------------------
@@ -468,9 +464,10 @@ void OSC_WaveMorph_3::onReset()
 {
     memset(m_GraphData, 0, sizeof(m_GraphData));
 
-    m_pEnvelope->setDataAll((int *)m_GraphData);
+    m_EditData->setDataAll((int *)m_GraphData);
 
     ChangeChannel(0);
+    m_refreshWidgets = true;
 }
 
 //-----------------------------------------------------
@@ -484,8 +481,9 @@ void OSC_WaveMorph_3::onRandomize()
     for (ch = 0; ch < nCHANNELS; ch++)
     {
         for (i = 0; i < ENVELOPE_HANDLES; i++)
-            m_pEnvelope->setVal(ch, i, random::uniform());
+            m_EditData->m_EnvData[ch].setVal(i, random::uniform());
     }
+    m_refreshWidgets = true;
 }
 
 //-----------------------------------------------------
@@ -502,17 +500,10 @@ void OSC_WaveMorph_3::ChangeChannel(int ch)
     if (m_bCpy)
     {
         m_bCpy = false;
-        m_pButtonCopy->Set(false);
-
-        for (i = 0; i < ENVELOPE_HANDLES; i++)
-        {
-            m_pEnvelope->setVal(ch, i, m_pEnvelope->m_EditData->m_EnvData[m_CurrentChannel].m_HandleVal[i]);
-        }
     }
 
     m_CurrentChannel = ch;
-    m_pButtonChSelect->Set(ch, true);
-    m_pEnvelope->setView(ch);
+    m_refreshWidgets = true;
 }
 
 //-----------------------------------------------------
@@ -641,17 +632,17 @@ void OSC_WaveMorph_3::process(const ProcessArgs &args)
     // process each channel
     for (ch = 0; ch < nCHANNELS; ch++)
     {
-        m_pEnvelope->m_EditData->m_EnvData[ch].m_Clock.syncInc =
+        m_EditData->m_EnvData[ch].m_Clock.syncInc =
             32.7032f *
             clamp(powf(2.0f, clamp(inputs[INPUT_VOCT].getNormalVoltage(4.0f), 0.0f, VOCT_MAX)),
                   0.0f, 4186.01f);
 
+        // FIXME
         if (m_bSolo && ch == m_CurrentChannel)
-            fout += m_pEnvelope->procStep(ch, false, false);
+            fout += m_EditData->procStep(ch, false, false);
         else if (!m_bSolo)
-            fout += m_pEnvelope->procStep(ch, false, false) * fmorph[ch];
+            fout += m_EditData->procStep(ch, false, false) * fmorph[ch];
     }
-
     cutoff = clamp(params[PARAM_CUTOFF].getValue() *
                        (inputs[IN_FILTER].getNormalVoltage(CV_MAX10) / CV_MAX10),
                    0.0f, 1.0f);
@@ -660,7 +651,8 @@ void OSC_WaveMorph_3::process(const ProcessArgs &args)
     flevel = clamp(params[PARAM_LEVEL].getValue() *
                        (inputs[IN_LEVEL].getNormalVoltage(CV_MAX10) / CV_MAX10),
                    0.0f, 1.0f);
-    fout *= flevel * AUDIO_MAX;
+    fout *=
+        flevel; //  * AUDIO_MAX; // RANGE_Audio already has an AUDIO_MAX in it. Don't double apply
 
     Filter(&fout);
 

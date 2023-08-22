@@ -1,5 +1,7 @@
 #pragma once
 
+#define COUTD std::cout << __FILE__ << ":" << __LINE__ << " "
+
 #define PI 3.14159f
 #define DEG2RAD(x) ((x) * (PI / 180.0f))
 #define RAD2DEG(x) ((x) * (180.0f / PI))
@@ -210,8 +212,6 @@ struct Widget_EnvelopeEdit : OpaqueWidget
 
     bool m_bInitialized = false;
 
-    int m_TimeDiv[MAX_ENVELOPE_CHANNELS] = {TIME_64th};
-
     float m_divw = 0;
     float m_handleSize = 0, m_handleSizeD2;
     int m_currentChannel = 0;
@@ -222,15 +222,32 @@ struct Widget_EnvelopeEdit : OpaqueWidget
     float m_Dragx = 0;
     float m_Dragy = 0;
 
-    int m_BeatLen = 0;
-
     struct EditData
     {
+        EditData()
+        {
+            for (auto ch = 0; ch < MAX_ENVELOPE_CHANNELS; ch++)
+            {
+                m_EnvData[ch].Init(EnvelopeData::MODE_LOOP, EnvelopeData::RANGE_0to5, false, 1);
+            }
+        }
         EnvelopeData m_EnvData[MAX_ENVELOPE_CHANNELS] = {};
 
         float m_fband = 0.0f;
         bool m_bDraw = false;
         bool m_bClkReset = false;
+
+        bool m_bClkd = false;
+        int m_BeatLen = 0;
+
+        int m_TimeDiv[MAX_ENVELOPE_CHANNELS] = {TIME_64th};
+
+        float procStep(int ch, bool bTrig, bool bHold);
+        void getDataAll(int *pint);
+        void setDataAll(int *pint);
+        int getPos(int ch);
+        void setBeatLen(int len);
+        void smoothWave(int ch, float amt);
     };
 
     std::shared_ptr<EditData> m_EditData;
@@ -240,7 +257,6 @@ struct Widget_EnvelopeEdit : OpaqueWidget
     EnvelopeEditCALLBACK *m_pCallback = NULL;
     void *m_pClass = NULL;
 
-    bool m_bClkd = false;
     bool m_bCtrl = false;
 
     Widget_EnvelopeEdit(int x, int y, int w, int h, int handleSize,
@@ -250,23 +266,16 @@ struct Widget_EnvelopeEdit : OpaqueWidget
     void setView(int ch);
     void resetValAll(int ch, float val);
     void setVal(int ch, int handle, float val);
-    void smoothWave(int ch, float amt);
     void setMode(int ch, int Mode);
     void setRange(int ch, int Range);
     void setGateMode(int ch, bool bGate);
     void setTimeDiv(int ch, int timediv);
-    void setBeatLen(int len);
 
-    int getPos(int ch);
     void setPos(int ch, int pos);
-
-    void setDataAll(int *pint);
-    void getDataAll(int *pint);
 
     float getActualVal(int ch, float val);
 
     bool process_state(int ch, bool bTrig, bool bHold);
-    float procStep(int ch, bool bTrig, bool bHold);
 
     float Val2y(float fval);
     float y2Val(float fy);
@@ -2896,28 +2905,5 @@ struct Knob_Yellow3_20_Snap : RoundKnob
         snap = true;
         setSvg(APP->window->loadSvg(asset::plugin(thePlugin, "res/mschack_Knob_Yellow3_20.svg")));
         // setSVG(SVG::load(asset::plugin(thePlugin, "res/mschack_Knob_Yellow3_20.svg" )));
-    }
-};
-
-/**
- * This struct is used to hold a pointer to the module and respond to -> in the
- * widget construction stage for 'impure' port widgets. It also has a local dummy.
- * That local dummy would have the lifetime of the constructor but that's OK, since
- * the widgets shoudl all deal with null modules and the only thing we are doing
- * is stashing references which are GCed by the addChild
- *
- * @tparam T
- */
-template <typename T> struct PModTempInstance
-{
-    T dummy;
-    T *real{nullptr};
-    PModTempInstance(T *t) : real(t) {}
-
-    T *operator->()
-    {
-        if (real)
-            return real;
-        return &dummy;
     }
 };

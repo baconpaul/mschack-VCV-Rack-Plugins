@@ -29,15 +29,13 @@ Widget_EnvelopeEdit::Widget_EnvelopeEdit(int x, int y, int w, int h, int handleS
     // handles
     for (ch = 0; ch < MAX_ENVELOPE_CHANNELS; ch++)
     {
-        m_EditData->m_EnvData[ch].Init(EnvelopeData::MODE_LOOP, EnvelopeData::RANGE_0to5, false, m_divw);
-
         for (hd = 0; hd < ENVELOPE_HANDLES; hd++)
             m_HandleCol[hd].dwCol = 0xFFFFFF;
     }
 
     recalcLine(-1, 0);
 
-    m_BeatLen = (int)APP->engine->getSampleRate();
+    m_EditData->m_BeatLen = (int)APP->engine->getSampleRate();
 
     m_bInitialized = true;
 }
@@ -82,7 +80,6 @@ void Widget_EnvelopeEdit::setView(int ch)
 {
     if (!m_bInitialized && ch < MAX_ENVELOPE_CHANNELS && ch >= 0)
         return;
-
     m_currentChannel = ch;
 }
 
@@ -111,11 +108,14 @@ void Widget_EnvelopeEdit::setVal(int ch, int handle, float val)
 //-----------------------------------------------------
 // Procedure:   smoothWave
 //-----------------------------------------------------
-void Widget_EnvelopeEdit::smoothWave(int ch, float amt)
+void Widget_EnvelopeEdit::EditData::smoothWave(int ch, float amt)
 {
     float avg;
 
-    if (!m_bInitialized && ch < MAX_ENVELOPE_CHANNELS && ch >= 0)
+    // gross hack for quick port
+    auto m_EditData = this;
+
+    if (ch < MAX_ENVELOPE_CHANNELS && ch >= 0)
         return;
 
     for (int j = 0; j < ENVELOPE_HANDLES; j++)
@@ -125,20 +125,26 @@ void Widget_EnvelopeEdit::smoothWave(int ch, float amt)
         // smooth
         if (j > 0 && j < ENVELOPE_DIVISIONS)
         {
-            avg = (m_EditData->m_EnvData[ch].m_HandleVal[j - 1] + m_EditData->m_EnvData[ch].m_HandleVal[j] +
+            avg = (m_EditData->m_EnvData[ch].m_HandleVal[j - 1] +
+                   m_EditData->m_EnvData[ch].m_HandleVal[j] +
                    m_EditData->m_EnvData[ch].m_HandleVal[j + 1]) /
                   3.0f;
         }
         else if (j == 0)
         {
-            avg = (m_EditData->m_EnvData[ch].m_HandleVal[j] + m_EditData->m_EnvData[ch].m_HandleVal[j + 1]) / 2.0f;
+            avg = (m_EditData->m_EnvData[ch].m_HandleVal[j] +
+                   m_EditData->m_EnvData[ch].m_HandleVal[j + 1]) /
+                  2.0f;
         }
         else if (j == ENVELOPE_DIVISIONS)
         {
-            avg = (m_EditData->m_EnvData[ch].m_HandleVal[j - 1] + m_EditData->m_EnvData[ch].m_HandleVal[j]) / 2.0f;
+            avg = (m_EditData->m_EnvData[ch].m_HandleVal[j - 1] +
+                   m_EditData->m_EnvData[ch].m_HandleVal[j]) /
+                  2.0f;
         }
 
-        m_EditData->m_EnvData[ch].m_HandleVal[j] = (m_EditData->m_EnvData[ch].m_HandleVal[j] * (1.0f - amt)) + (avg * amt);
+        m_EditData->m_EnvData[ch].m_HandleVal[j] =
+            (m_EditData->m_EnvData[ch].m_HandleVal[j] * (1.0f - amt)) + (avg * amt);
     }
 }
 
@@ -183,13 +189,16 @@ void Widget_EnvelopeEdit::setTimeDiv(int ch, int timediv)
     if (!m_bInitialized && ch < MAX_ENVELOPE_CHANNELS && ch >= 0)
         return;
 
-    m_TimeDiv[ch] = timediv;
-    setBeatLen(m_BeatLen);
+    m_EditData->m_TimeDiv[ch] = timediv;
+    m_EditData->setBeatLen(m_EditData->m_BeatLen);
 }
 //-----------------------------------------------------
 // Procedure:   setDataAll
 //-----------------------------------------------------
-int Widget_EnvelopeEdit::getPos(int ch) { return (int)(m_EditData->m_EnvData[ch].m_Clock.fpos * 10000.0f); }
+int Widget_EnvelopeEdit::EditData::getPos(int ch)
+{
+    return (int)(m_EnvData[ch].m_Clock.fpos * 10000.0f);
+}
 
 //-----------------------------------------------------
 // Procedure:   setDataAll
@@ -202,40 +211,31 @@ void Widget_EnvelopeEdit::setPos(int ch, int pos)
 //-----------------------------------------------------
 // Procedure:   setDataAll
 //-----------------------------------------------------
-void Widget_EnvelopeEdit::setDataAll(int *pint)
+void Widget_EnvelopeEdit::EditData::setDataAll(int *pint)
 {
     int i, j, count = 0;
-
-    if (!m_bInitialized)
-        return;
 
     for (i = 0; i < MAX_ENVELOPE_CHANNELS; i++)
     {
         for (j = 0; j < ENVELOPE_HANDLES; j++)
         {
-            m_EditData->m_EnvData[i].m_HandleVal[j] = clamp((float)pint[count++] / 10000.0f, 0.0f, 1.0f);
+            m_EnvData[i].m_HandleVal[j] = clamp((float)pint[count++] / 10000.0f, 0.0f, 1.0f);
         }
     }
-
-    // recalc all lines
-    recalcLine(-1, 0);
 }
 
 //-----------------------------------------------------
 // Procedure:   getDataAll
 //-----------------------------------------------------
-void Widget_EnvelopeEdit::getDataAll(int *pint)
+void Widget_EnvelopeEdit::EditData::getDataAll(int *pint)
 {
     int i, j, count = 0;
-
-    if (!m_bInitialized)
-        return;
 
     for (i = 0; i < MAX_ENVELOPE_CHANNELS; i++)
     {
         for (j = 0; j < ENVELOPE_HANDLES; j++)
         {
-            pint[count++] = (int)(m_EditData->m_EnvData[i].m_HandleVal[j] * 10000.0);
+            pint[count++] = (int)(m_EnvData[i].m_HandleVal[j] * 10000.0);
         }
     }
 }
@@ -313,7 +313,8 @@ void Widget_EnvelopeEdit::draw(const DrawArgs &args)
         nvgStrokeColor(args.vg, nvgRGBA(255, 255, 255, 80));
         nvgBeginPath(args.vg);
         nvgMoveTo(args.vg, m_EditData->m_EnvData[m_currentChannel].m_fIndicator * box.size.x, 0);
-        nvgLineTo(args.vg, m_EditData->m_EnvData[m_currentChannel].m_fIndicator * box.size.x, box.size.y);
+        nvgLineTo(args.vg, m_EditData->m_EnvData[m_currentChannel].m_fIndicator * box.size.x,
+                  box.size.y);
         nvgStroke(args.vg);
     }
 }
@@ -330,8 +331,8 @@ void Widget_EnvelopeEdit::drawLayer(const rack::widget::Widget::DrawArgs &args, 
         {
             nvgBeginPath(args.vg);
             nvgRect(args.vg, h * m_divw,
-                    (1.0f - m_EditData->m_EnvData[m_currentChannel].m_HandleVal[h]) * box.size.y, m_divw,
-                    box.size.y * m_EditData->m_EnvData[m_currentChannel].m_HandleVal[h]);
+                    (1.0f - m_EditData->m_EnvData[m_currentChannel].m_HandleVal[h]) * box.size.y,
+                    m_divw, box.size.y * m_EditData->m_EnvData[m_currentChannel].m_HandleVal[h]);
             nvgFillColor(args.vg, nvgRGBA(157, 100, 100, 128));
             nvgFill(args.vg);
         }
@@ -343,13 +344,15 @@ void Widget_EnvelopeEdit::drawLayer(const rack::widget::Widget::DrawArgs &args, 
         nvgBeginPath(args.vg);
 
         auto x = 0.f;
-        nvgMoveTo(args.vg, x, (1.0f - m_EditData->m_EnvData[m_currentChannel].m_HandleVal[0]) * box.size.y);
+        nvgMoveTo(args.vg, x,
+                  (1.0f - m_EditData->m_EnvData[m_currentChannel].m_HandleVal[0]) * box.size.y);
 
         // draw lines
         for (auto h = 1; h < ENVELOPE_HANDLES; h++)
         {
             x += m_divw;
-            nvgLineTo(args.vg, x, (1.0f - m_EditData->m_EnvData[m_currentChannel].m_HandleVal[h]) * box.size.y);
+            nvgLineTo(args.vg, x,
+                      (1.0f - m_EditData->m_EnvData[m_currentChannel].m_HandleVal[h]) * box.size.y);
         }
 
         nvgStroke(args.vg);
@@ -450,8 +453,8 @@ void Widget_EnvelopeEdit::onDragMove(const event::DragMove &e)
         if (m_bCtrl)
         {
             delta = 0.0001f * e.mouseDelta.y;
-            m_EditData->m_EnvData[m_currentChannel].m_HandleVal[m_Dragi] =
-                clamp(m_EditData->m_EnvData[m_currentChannel].m_HandleVal[m_Dragi] - delta, 0.0f, 1.0f);
+            m_EditData->m_EnvData[m_currentChannel].m_HandleVal[m_Dragi] = clamp(
+                m_EditData->m_EnvData[m_currentChannel].m_HandleVal[m_Dragi] - delta, 0.0f, 1.0f);
         }
         else
         {
@@ -464,8 +467,9 @@ void Widget_EnvelopeEdit::onDragMove(const event::DragMove &e)
         }
 
         if (m_pCallback && m_pClass)
-            m_pCallback(m_pClass, m_EditData->m_EnvData[m_currentChannel].getActualVal(
-                                      m_EditData->m_EnvData[m_currentChannel].m_HandleVal[m_Dragi]));
+            m_pCallback(m_pClass,
+                        m_EditData->m_EnvData[m_currentChannel].getActualVal(
+                            m_EditData->m_EnvData[m_currentChannel].m_HandleVal[m_Dragi]));
 
         if (m_EditData->m_fband > 0.0001)
         {
@@ -479,7 +483,8 @@ void Widget_EnvelopeEdit::onDragMove(const event::DragMove &e)
                     break;
 
                 m_EditData->m_EnvData[m_currentChannel].m_HandleVal[i] =
-                    clamp(m_EditData->m_EnvData[m_currentChannel].m_HandleVal[i] - (delta * fband), 0.0f, 1.0f);
+                    clamp(m_EditData->m_EnvData[m_currentChannel].m_HandleVal[i] - (delta * fband),
+                          0.0f, 1.0f);
 
                 fband *= 0.6f;
             }
@@ -494,7 +499,8 @@ void Widget_EnvelopeEdit::onDragMove(const event::DragMove &e)
                     break;
 
                 m_EditData->m_EnvData[m_currentChannel].m_HandleVal[i] =
-                    clamp(m_EditData->m_EnvData[m_currentChannel].m_HandleVal[i] - (delta * fband), 0.0f, 1.0f);
+                    clamp(m_EditData->m_EnvData[m_currentChannel].m_HandleVal[i] - (delta * fband),
+                          0.0f, 1.0f);
 
                 fband *= 0.6f;
             }
@@ -528,7 +534,7 @@ void Widget_EnvelopeEdit::onDragMove(const event::DragMove &e)
 //-----------------------------------------------------
 // Procedure:   setBeatLen
 //-----------------------------------------------------
-void Widget_EnvelopeEdit::setBeatLen(int len)
+void Widget_EnvelopeEdit::EditData::setBeatLen(int len)
 {
     m_BeatLen = len;
     m_bClkd = true;
@@ -541,27 +547,27 @@ void Widget_EnvelopeEdit::setBeatLen(int len)
         switch (m_TimeDiv[i])
         {
         case TIME_64th:
-            m_EditData->m_EnvData[i].m_Clock.syncInc =
+            m_EnvData[i].m_Clock.syncInc =
                 ((APP->engine->getSampleRate() / (float)m_BeatLen) * 16.0) / 16.0;
             break;
         case TIME_32nd:
-            m_EditData->m_EnvData[i].m_Clock.syncInc =
+            m_EnvData[i].m_Clock.syncInc =
                 ((APP->engine->getSampleRate() / (float)m_BeatLen) * 8.0) / 16.0;
             break;
         case TIME_16th:
-            m_EditData->m_EnvData[i].m_Clock.syncInc =
+            m_EnvData[i].m_Clock.syncInc =
                 ((APP->engine->getSampleRate() / (float)m_BeatLen) * 4.0) / 16.0;
             break;
         case TIME_8th:
-            m_EditData->m_EnvData[i].m_Clock.syncInc =
+            m_EnvData[i].m_Clock.syncInc =
                 ((APP->engine->getSampleRate() / (float)m_BeatLen) * 2.0) / 16.0;
             break;
         case TIME_4tr:
-            m_EditData->m_EnvData[i].m_Clock.syncInc =
+            m_EnvData[i].m_Clock.syncInc =
                 ((APP->engine->getSampleRate() / (float)m_BeatLen) * 1.0) / 16.0;
             break;
         case TIME_Bar:
-            m_EditData->m_EnvData[i].m_Clock.syncInc =
+            m_EnvData[i].m_Clock.syncInc =
                 ((APP->engine->getSampleRate() / (float)m_BeatLen) * 0.25) / 16.0;
             break;
         }
@@ -571,8 +577,9 @@ void Widget_EnvelopeEdit::setBeatLen(int len)
 //-----------------------------------------------------
 // Procedure:   procStep
 //-----------------------------------------------------
-float Widget_EnvelopeEdit::procStep(int ch, bool bTrig, bool bHold)
+float Widget_EnvelopeEdit::EditData::procStep(int ch, bool bTrig, bool bHold)
 {
+    auto m_EditData = this;
     if ((m_EditData->m_bClkReset || bTrig) && !bHold)
     {
         if (m_EditData->m_EnvData[ch].m_Mode == EnvelopeData::MODE_REVERSE)

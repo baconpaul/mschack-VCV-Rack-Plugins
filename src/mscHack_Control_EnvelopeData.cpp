@@ -467,5 +467,6 @@ float EnvelopeData::procStep(bool bTrig, bool bHold)
 
     handle = (int)(m_Clock.fpos / (APP->engine->getSampleRate() / (float)ENVELOPE_DIVISIONS));
 
-    return valfromline(handle, m_fIndicator * m_fsegsize * (float)ENVELOPE_DIVISIONS);
+    auto res = valfromline(handle, m_fIndicator * m_fsegsize * (float)ENVELOPE_DIVISIONS);
+    return res;
 }

@@ -93,38 +93,11 @@ struct SEQ_Envelope_8 : Module
     int m_waveSet = 0;
     bool m_bCpy = false;
 
-    /*
-     * OK the right thing to do is to move this envelope to the widget
-     * But that is super duper painful. It houses loads of data and state.
-     * So lets leave it here. This means this module will not run properly in
-     * a future 'headless' mode most likely.
-     *
-     * But also we still have to fix dataFromJSON properly and the Browser instance thing.
-     */
-    Widget_EnvelopeEdit *m_pEnvelope = NULL;
-    MyLEDButtonStrip *m_pButtonChSelect = NULL;
-    MyLEDButtonStrip *m_pButtonModeSelect = NULL;
-    MyLEDButtonStrip *m_pButtonRangeSelect = NULL;
-    MyLEDButtonStrip *m_pButtonTimeSelect = NULL;
-    MyLEDButton *m_pButtonHold[nCHANNELS] = {};
-    MyLEDButton *m_pButtonTrig[nCHANNELS] = {};
-    MyLEDButton *m_pButtonGateMode = NULL;
-    MyLEDButton *m_pButtonWaveSetBck = NULL;
-    MyLEDButton *m_pButtonWaveSetFwd = NULL;
-    MyLEDButton *m_pButtonJoinEnds = NULL;
-    MyLEDButton *m_pButtonGlobalReset = NULL;
-    MyLEDButton *m_pButtonDraw = NULL;
-    MyLEDButton *m_pButtonCopy = NULL;
-    MyLEDButton *m_pButtonRand = NULL;
-    MyLEDButton *m_pButtonInvert = NULL;
-    MyLEDButton *m_pButtonSmooth = NULL;
-
-    Label *m_pTextLabel = NULL;
-
     std::atomic<bool> m_refreshWidgets{false};
-    void doWidgetRefresh();
-
     int m_BeatCount = 0;
+    std::atomic<int> m_bTrigCountdown[nCHANNELS]{}, m_bHoldCountdown[nCHANNELS]{};
+
+    std::string m_sTextLabel;
 
     //-----------------------------------------------------
     // Band_Knob
@@ -140,7 +113,7 @@ struct SEQ_Envelope_8 : Module
             mymodule = (SEQ_Envelope_8 *)paramQuantity->module;
 
             if (mymodule)
-                mymodule->m_pEnvelope->m_EditData->m_fband = paramQuantity->getValue();
+                mymodule->m_EditData->m_fband = paramQuantity->getValue();
 
             RoundKnob::onChange(e);
         }
@@ -172,7 +145,7 @@ void EnvelopeEditCALLBACK(void *pClass, float val)
 
     snprintf(strVal, 10, "[%.3fV]", val);
 
-    mymodule->m_pTextLabel->text = strVal;
+    mymodule->m_sTextLabel = strVal;
 }
 
 //-----------------------------------------------------
@@ -183,7 +156,8 @@ void SynthEdit_WaveSmooth(void *pClass, int id, bool bOn)
     SEQ_Envelope_8 *m;
     m = (SEQ_Envelope_8 *)pClass;
 
-    m->m_pEnvelope->smoothWave(m->m_CurrentChannel, 0.25f);
+    m->m_EditData->smoothWave(m->m_CurrentChannel, 0.25f);
+    m->m_refreshWidgets = true;
 }
 
 //-----------------------------------------------------
@@ -197,7 +171,8 @@ void SEQ_Envelope_8_DrawMode(void *pClass, int id, bool bOn)
         return;
 
     mymodule = (SEQ_Envelope_8 *)pClass;
-    mymodule->m_pEnvelope->m_EditData->m_bDraw = bOn;
+    mymodule->m_EditData->m_bDraw = bOn;
+    mymodule->m_refreshWidgets = true;
 }
 
 //-----------------------------------------------------
@@ -212,7 +187,7 @@ void SEQ_Envelope_8_GateMode(void *pClass, int id, bool bOn)
 
     mymodule = (SEQ_Envelope_8 *)pClass;
     mymodule->m_bGateMode[mymodule->m_CurrentChannel] = bOn;
-    mymodule->m_pEnvelope->setGateMode(mymodule->m_CurrentChannel, bOn);
+    mymodule->m_refreshWidgets = true;
 }
 
 //-----------------------------------------------------
@@ -228,6 +203,7 @@ void SEQ_Envelope_8_ChSelect(void *pClass, int id, int nbutton, bool bOn)
     mymodule = (SEQ_Envelope_8 *)pClass;
 
     mymodule->ChangeChannel(nbutton);
+    mymodule->m_refreshWidgets = true;
 }
 
 //-----------------------------------------------------
@@ -243,7 +219,7 @@ void SEQ_Envelope_8_ModeSelect(void *pClass, int id, int nbutton, bool bOn)
     mymodule = (SEQ_Envelope_8 *)pClass;
 
     mymodule->m_Modes[mymodule->m_CurrentChannel] = nbutton;
-    mymodule->m_pEnvelope->setMode(mymodule->m_CurrentChannel, nbutton);
+    mymodule->m_refreshWidgets = true;
 }
 
 //-----------------------------------------------------
@@ -259,7 +235,7 @@ void SEQ_Envelope_8_TimeSelect(void *pClass, int id, int nbutton, bool bOn)
     mymodule = (SEQ_Envelope_8 *)pClass;
 
     mymodule->m_TimeDivs[mymodule->m_CurrentChannel] = nbutton;
-    mymodule->m_pEnvelope->setTimeDiv(mymodule->m_CurrentChannel, nbutton);
+    mymodule->m_refreshWidgets = true;
 }
 
 //-----------------------------------------------------
@@ -275,7 +251,7 @@ void SEQ_Envelope_8_RangeSelect(void *pClass, int id, int nbutton, bool bOn)
     mymodule = (SEQ_Envelope_8 *)pClass;
 
     mymodule->m_Ranges[mymodule->m_CurrentChannel] = nbutton;
-    mymodule->m_pEnvelope->setRange(mymodule->m_CurrentChannel, nbutton);
+    mymodule->m_refreshWidgets = true;
 }
 
 //-----------------------------------------------------
@@ -291,6 +267,7 @@ void SEQ_Envelope_8_Hold(void *pClass, int id, bool bOn)
     mymodule = (SEQ_Envelope_8 *)pClass;
 
     mymodule->m_bHold[id] = bOn;
+    mymodule->m_refreshWidgets = true;
 }
 
 //-----------------------------------------------------
@@ -316,7 +293,8 @@ void SEQ_Envelope_8_WaveSet(void *pClass, int id, bool bOn)
             mymodule->m_waveSet = EnvelopeData::nPRESETS - 1;
     }
 
-    mymodule->m_pEnvelope->m_EditData->m_EnvData[mymodule->m_CurrentChannel].Preset(mymodule->m_waveSet);
+    mymodule->m_EditData->m_EnvData[mymodule->m_CurrentChannel].Preset(mymodule->m_waveSet);
+    mymodule->m_refreshWidgets = true;
 }
 
 //-----------------------------------------------------
@@ -333,9 +311,9 @@ void SEQ_Envelope_8_WaveInvert(void *pClass, int id, bool bOn)
     mymodule = (SEQ_Envelope_8 *)pClass;
 
     for (i = 0; i < ENVELOPE_HANDLES; i++)
-        mymodule->m_pEnvelope->setVal(
-            mymodule->m_CurrentChannel, i,
-            1.0f - mymodule->m_pEnvelope->m_EditData->m_EnvData[mymodule->m_CurrentChannel].m_HandleVal[i]);
+        mymodule->m_EditData->m_EnvData[mymodule->m_CurrentChannel].setVal(
+            i, 1.0f - mymodule->m_EditData->m_EnvData[mymodule->m_CurrentChannel].m_HandleVal[i]);
+    mymodule->m_refreshWidgets = true;
 }
 
 //-----------------------------------------------------
@@ -352,7 +330,8 @@ void SEQ_Envelope_8_WaveRand(void *pClass, int id, bool bOn)
     mymodule = (SEQ_Envelope_8 *)pClass;
 
     for (i = 0; i < ENVELOPE_HANDLES; i++)
-        mymodule->m_pEnvelope->setVal(mymodule->m_CurrentChannel, i, random::uniform());
+        mymodule->m_EditData->m_EnvData[mymodule->m_CurrentChannel].setVal(i, random::uniform());
+    mymodule->m_refreshWidgets = true;
 }
 
 //-----------------------------------------------------
@@ -368,6 +347,7 @@ void SEQ_Envelope_8_WaveCopy(void *pClass, int id, bool bOn)
     mymodule = (SEQ_Envelope_8 *)pClass;
 
     mymodule->m_bCpy = bOn;
+    mymodule->m_refreshWidgets = true;
 }
 
 //-----------------------------------------------------
@@ -388,14 +368,17 @@ void SEQ_Envelope_8_Trig(void *pClass, int id, bool bOn)
         // turn on all trigs
         for (int i = 0; i < nCHANNELS; i++)
         {
-            mymodule->m_pButtonTrig[i]->Set(bOn);
             mymodule->m_bTrig[i] = true;
+            mymodule->m_bTrigCountdown[i] = 5;
         }
     }
     else
     {
         mymodule->m_bTrig[id] = true;
+        mymodule->m_bTrigCountdown[id] = 5;
     }
+
+    mymodule->m_refreshWidgets = true;
 }
 
 std::weak_ptr<Widget_EnvelopeEdit::EditData> S8W_browserEditData;
@@ -407,10 +390,28 @@ std::weak_ptr<Widget_EnvelopeEdit::EditData> S8W_browserEditData;
 
 struct SEQ_Envelope_8_Widget : ModuleWidget
 {
+    Widget_EnvelopeEdit *m_pEnvelope = NULL;
+    MyLEDButtonStrip *m_pButtonChSelect = NULL;
+    MyLEDButtonStrip *m_pButtonModeSelect = NULL;
+    MyLEDButtonStrip *m_pButtonRangeSelect = NULL;
+    MyLEDButtonStrip *m_pButtonTimeSelect = NULL;
+    MyLEDButton *m_pButtonHold[nCHANNELS] = {};
+    MyLEDButton *m_pButtonTrig[nCHANNELS] = {};
+    MyLEDButton *m_pButtonGateMode = NULL;
+    MyLEDButton *m_pButtonWaveSetBck = NULL;
+    MyLEDButton *m_pButtonWaveSetFwd = NULL;
+    MyLEDButton *m_pButtonJoinEnds = NULL;
+    MyLEDButton *m_pButtonGlobalReset = NULL;
+    MyLEDButton *m_pButtonDraw = NULL;
+    MyLEDButton *m_pButtonCopy = NULL;
+    MyLEDButton *m_pButtonRand = NULL;
+    MyLEDButton *m_pButtonInvert = NULL;
+    MyLEDButton *m_pButtonSmooth = NULL;
+
+    Label *m_pTextLabel = NULL;
 
     SEQ_Envelope_8_Widget(SEQ_Envelope_8 *module)
     {
-        PModTempInstance<SEQ_Envelope_8> pmod{module};
         int ch, x = 0, y = 0;
 
         // box.size = Vec( 15*36, 380);
@@ -432,16 +433,16 @@ struct SEQ_Envelope_8_Widget : ModuleWidget
         addInput(createInput<MyPortInSmall>(Vec(21, 18), module, SEQ_Envelope_8::INPUT_CLK_RESET));
 
         // invert
-        pmod->m_pButtonInvert =
+        m_pButtonInvert =
             new MyLEDButton(95, 23, 11, 11, 8.0, DWRGB(180, 180, 180), DWRGB(0, 255, 255),
                             MyLEDButton::TYPE_MOMENTARY, 0, module, SEQ_Envelope_8_WaveInvert);
-        addChild(pmod->m_pButtonInvert);
+        addChild(m_pButtonInvert);
 
         // smooth
-        pmod->m_pButtonSmooth =
+        m_pButtonSmooth =
             new MyLEDButton(125, 23, 11, 11, 8.0, DWRGB(180, 180, 180), DWRGB(0, 255, 255),
                             MyLEDButton::TYPE_MOMENTARY, 0, module, SynthEdit_WaveSmooth);
-        addChild(pmod->m_pButtonSmooth);
+        addChild(m_pButtonSmooth);
 
         // envelope editor
         std::shared_ptr<Widget_EnvelopeEdit::EditData> ed;
@@ -461,91 +462,91 @@ struct SEQ_Envelope_8_Widget : ModuleWidget
                 S8W_browserEditData = ed;
             }
         }
-        pmod->m_pEnvelope =
-            new Widget_EnvelopeEdit(47, 42, 416, 192, 7, ed, module, EnvelopeEditCALLBACK, nCHANNELS);
-        addChild(pmod->m_pEnvelope);
+        m_pEnvelope = new Widget_EnvelopeEdit(47, 42, 416, 192, 7, ed, module, EnvelopeEditCALLBACK,
+                                              nCHANNELS);
+        addChild(m_pEnvelope);
 
         // envelope select buttons
-        pmod->m_pButtonChSelect = new MyLEDButtonStrip(
+        m_pButtonChSelect = new MyLEDButtonStrip(
             210, 23, 11, 11, 3, 8.0, nCHANNELS, false, DWRGB(180, 180, 180), DWRGB(0, 255, 255),
             MyLEDButtonStrip::TYPE_EXCLUSIVE, 0, module, SEQ_Envelope_8_ChSelect);
-        addChild(pmod->m_pButtonChSelect);
+        addChild(m_pButtonChSelect);
 
-        pmod->m_pTextLabel = new Label();
-        pmod->m_pTextLabel->box.pos = Vec(450, 10);
-        pmod->m_pTextLabel->text = "----";
-        addChild(pmod->m_pTextLabel);
+        m_pTextLabel = new Label();
+        m_pTextLabel->box.pos = Vec(450, 10);
+        m_pTextLabel->text = "----";
+        addChild(m_pTextLabel);
 
         // wave set buttons
         x = 364;
         y = 23;
-        pmod->m_pButtonWaveSetBck =
+        m_pButtonWaveSetBck =
             new MyLEDButton(x, y, 11, 11, 8.0, DWRGB(180, 180, 180), DWRGB(0, 255, 255),
                             MyLEDButton::TYPE_MOMENTARY, 0, module, SEQ_Envelope_8_WaveSet);
-        addChild(pmod->m_pButtonWaveSetBck);
+        addChild(m_pButtonWaveSetBck);
 
-        pmod->m_pButtonWaveSetFwd =
+        m_pButtonWaveSetFwd =
             new MyLEDButton(x + 12, y, 11, 11, 8.0, DWRGB(180, 180, 180), DWRGB(0, 255, 255),
                             MyLEDButton::TYPE_MOMENTARY, 1, module, SEQ_Envelope_8_WaveSet);
-        addChild(pmod->m_pButtonWaveSetFwd);
+        addChild(m_pButtonWaveSetFwd);
 
         x = 405;
 
         // random
-        pmod->m_pButtonRand =
+        m_pButtonRand =
             new MyLEDButton(x, y, 11, 11, 8.0, DWRGB(180, 180, 180), DWRGB(0, 255, 255),
                             MyLEDButton::TYPE_MOMENTARY, 0, module, SEQ_Envelope_8_WaveRand);
-        addChild(pmod->m_pButtonRand);
+        addChild(m_pButtonRand);
 
         x += 25;
 
         // copy
-        pmod->m_pButtonCopy =
+        m_pButtonCopy =
             new MyLEDButton(x, y, 11, 11, 8.0, DWRGB(180, 180, 180), DWRGB(0, 255, 255),
                             MyLEDButton::TYPE_SWITCH, 0, module, SEQ_Envelope_8_WaveCopy);
-        addChild(pmod->m_pButtonCopy);
+        addChild(m_pButtonCopy);
 
         // mode select
-        pmod->m_pButtonModeSelect = new MyLEDButtonStrip(
-            109, 256, 11, 11, 8, 8.0, EnvelopeData::nMODES, true, DWRGB(180, 180, 180),
-            DWRGB(0, 255, 255), MyLEDButtonStrip::TYPE_EXCLUSIVE, 0, module,
-            SEQ_Envelope_8_ModeSelect);
-        addChild(pmod->m_pButtonModeSelect);
+        m_pButtonModeSelect = new MyLEDButtonStrip(109, 256, 11, 11, 8, 8.0, EnvelopeData::nMODES,
+                                                   true, DWRGB(180, 180, 180), DWRGB(0, 255, 255),
+                                                   MyLEDButtonStrip::TYPE_EXCLUSIVE, 0, module,
+                                                   SEQ_Envelope_8_ModeSelect);
+        addChild(m_pButtonModeSelect);
 
         // time select
-        pmod->m_pButtonTimeSelect = new MyLEDButtonStrip(
+        m_pButtonTimeSelect = new MyLEDButtonStrip(
             272, 256, 11, 11, 8, 8.0, nTIMESETS, true, DWRGB(180, 180, 180), DWRGB(0, 255, 255),
             MyLEDButtonStrip::TYPE_EXCLUSIVE, 0, module, SEQ_Envelope_8_TimeSelect);
-        addChild(pmod->m_pButtonTimeSelect);
+        addChild(m_pButtonTimeSelect);
 
         // range select
-        pmod->m_pButtonRangeSelect = new MyLEDButtonStrip(
+        m_pButtonRangeSelect = new MyLEDButtonStrip(
             350, 256, 11, 11, 8, 8.0, EnvelopeData::nRANGES - 3, true, DWRGB(180, 180, 180),
             DWRGB(0, 255, 255), MyLEDButtonStrip::TYPE_EXCLUSIVE, 0, module,
             SEQ_Envelope_8_RangeSelect);
-        addChild(pmod->m_pButtonRangeSelect);
+        addChild(m_pButtonRangeSelect);
 
         // draw mode
-        pmod->m_pButtonDraw =
+        m_pButtonDraw =
             new MyLEDButton(48, 237, 11, 11, 8.0, DWRGB(180, 180, 180), DWRGB(255, 128, 0),
                             MyLEDButton::TYPE_SWITCH, 0, module, SEQ_Envelope_8_DrawMode);
-        addChild(pmod->m_pButtonDraw);
+        addChild(m_pButtonDraw);
 
         // gate mode
-        pmod->m_pButtonGateMode =
+        m_pButtonGateMode =
             new MyLEDButton(48, 254, 11, 11, 8.0, DWRGB(180, 180, 180), DWRGB(255, 128, 0),
                             MyLEDButton::TYPE_SWITCH, 0, module, SEQ_Envelope_8_GateMode);
-        addChild(pmod->m_pButtonGateMode);
+        addChild(m_pButtonGateMode);
 
         // global reset input
         addInput(
             createInput<MyPortInSmall>(Vec(21, 313), module, SEQ_Envelope_8::INPUT_GLOBAL_TRIG));
 
         // global reseet button
-        pmod->m_pButtonGlobalReset =
+        m_pButtonGlobalReset =
             new MyLEDButton(5, 315, 14, 14, 11.0, DWRGB(180, 180, 180), DWRGB(0, 255, 255),
                             MyLEDButton::TYPE_MOMENTARY, nCHANNELS, module, SEQ_Envelope_8_Trig);
-        addChild(pmod->m_pButtonGlobalReset);
+        addChild(m_pButtonGlobalReset);
 
         // band knob
         addParam(createParam<SEQ_Envelope_8::Band_Knob>(Vec(59.5, 280), module,
@@ -560,16 +561,16 @@ struct SEQ_Envelope_8_Widget : ModuleWidget
                 createInput<MyPortInSmall>(Vec(x, y), module, SEQ_Envelope_8::INPUT_CH_TRIG + ch));
 
             // trig button
-            pmod->m_pButtonTrig[ch] = new MyLEDButton(
-                x - 16, y + 2, 14, 14, 11.0, DWRGB(180, 180, 180), DWRGB(0, 255, 255),
-                MyLEDButton::TYPE_MOMENTARY, ch, module, SEQ_Envelope_8_Trig);
-            addChild(pmod->m_pButtonTrig[ch]);
+            m_pButtonTrig[ch] = new MyLEDButton(x - 16, y + 2, 14, 14, 11.0, DWRGB(180, 180, 180),
+                                                DWRGB(0, 255, 255), MyLEDButton::TYPE_MOMENTARY, ch,
+                                                module, SEQ_Envelope_8_Trig);
+            addChild(m_pButtonTrig[ch]);
 
             // hold button
-            pmod->m_pButtonHold[ch] =
+            m_pButtonHold[ch] =
                 new MyLEDButton(470, y + 2, 14, 14, 11.0, DWRGB(180, 180, 180), DWRGB(255, 0, 0),
                                 MyLEDButton::TYPE_SWITCH, ch, module, SEQ_Envelope_8_Hold);
-            addChild(pmod->m_pButtonHold[ch]);
+            addChild(m_pButtonHold[ch]);
 
             // hold gate input
             addInput(createInput<MyPortInSmall>(Vec(486, y), module,
@@ -584,7 +585,7 @@ struct SEQ_Envelope_8_Widget : ModuleWidget
 
         if (module)
         {
-            module->doWidgetRefresh();
+            module->m_refreshWidgets = true;
             module->m_bInitialized = true;
         }
     }
@@ -596,8 +597,36 @@ struct SEQ_Envelope_8_Widget : ModuleWidget
         {
             if (az->m_refreshWidgets)
             {
-                az->doWidgetRefresh();
+                az->m_refreshWidgets = false;
+                for (auto ch = 0; ch < nCHANNELS; ch++)
+                {
+
+                    // hold button
+                    m_pButtonHold[ch]->Set(az->m_bHold[ch]);
+
+                    m_pEnvelope->setGateMode(ch, az->m_bGateMode[ch]);
+                    m_pEnvelope->setMode(ch, az->m_Modes[ch]);
+                    m_pEnvelope->setRange(ch, az->m_Ranges[ch]);
+                    m_pEnvelope->setTimeDiv(ch, az->m_TimeDivs[ch]);
+                    m_pEnvelope->setPos(ch, az->m_HoldPos[ch]);
+                }
+
+                m_pEnvelope->setView(az->m_CurrentChannel);
             }
+            m_pTextLabel->text = az->m_sTextLabel;
+            m_pButtonCopy->Set(az->m_bCpy);
+
+            for (int ch = 0; ch < nCHANNELS; ++ch)
+            {
+                m_pButtonTrig[ch]->Set(az->m_bTrigCountdown[ch] > 0);
+                m_pButtonHold[ch]->Set(az->m_bHoldCountdown[ch] > 0);
+                if (az->m_bTrigCountdown[ch] > 0)
+                    az->m_bTrigCountdown[ch]--;
+                if (az->m_bHoldCountdown[ch] > 0)
+                    az->m_bHoldCountdown[ch]--;
+            }
+
+            m_pEnvelope->recalcLine(-1, 0);
         }
         Widget::step();
     }
@@ -629,10 +658,10 @@ json_t *SEQ_Envelope_8::dataToJson()
     if (!root)
         return NULL;
 
-    m_pEnvelope->getDataAll((int *)m_GraphData);
+    m_EditData->getDataAll((int *)m_GraphData);
 
     for (int i = 0; i < nCHANNELS; i++)
-        m_HoldPos[i] = m_pEnvelope->getPos(i);
+        m_HoldPos[i] = m_EditData->getPos(i);
 
     JsonParams(TOJSON, root);
 
@@ -647,14 +676,8 @@ void SEQ_Envelope_8::dataFromJson(json_t *root)
 {
     JsonParams(FROMJSON, root);
 
-    if (m_pEnvelope)
-    {
-        doWidgetRefresh();
-    }
-    else
-    {
-        m_refreshWidgets = true;
-    }
+    m_EditData->setDataAll((int *)m_GraphData);
+    m_refreshWidgets = true;
 }
 
 //-----------------------------------------------------
@@ -669,23 +692,11 @@ void SEQ_Envelope_8::onReset()
     memset(m_bGateMode, 0, sizeof(m_bGateMode));
     memset(m_Modes, 0, sizeof(m_Modes));
     memset(m_Ranges, 0, sizeof(m_Ranges));
-    memset(m_GraphData, 0, sizeof(m_GraphData));
+    memset(m_EditData->m_EnvData, 0, sizeof(m_EditData->m_EnvData));
     memset(m_bHold, 0, sizeof(m_bHold));
 
-    for (ch = 0; ch < nCHANNELS; ch++)
-    {
-        m_pButtonHold[ch]->Set(m_bHold[ch]);
-
-        m_pEnvelope->setGateMode(ch, m_bGateMode[ch]);
-        m_pEnvelope->setMode(ch, m_Modes[ch]);
-        m_pEnvelope->setRange(ch, m_Ranges[ch]);
-        m_pEnvelope->setTimeDiv(ch, m_TimeDivs[ch]);
-        m_pEnvelope->setPos(ch, m_HoldPos[ch]);
-    }
-
-    m_pEnvelope->setDataAll((int *)m_GraphData);
-
     ChangeChannel(0);
+    m_refreshWidgets = true;
 }
 
 //-----------------------------------------------------
@@ -699,8 +710,9 @@ void SEQ_Envelope_8::onRandomize()
     for (ch = 0; ch < nCHANNELS; ch++)
     {
         for (i = 0; i < ENVELOPE_HANDLES; i++)
-            m_pEnvelope->setVal(ch, i, random::uniform());
+            m_EditData->m_EnvData[ch].setVal(i, random::uniform());
     }
+    m_refreshWidgets = true;
 }
 
 //-----------------------------------------------------
@@ -717,53 +729,21 @@ void SEQ_Envelope_8::ChangeChannel(int ch)
     if (m_bCpy)
     {
         m_bCpy = false;
-        m_pButtonCopy->Set(false);
 
         for (i = 0; i < ENVELOPE_HANDLES; i++)
         {
-            m_pEnvelope->setVal(ch, i, m_pEnvelope->m_EditData->m_EnvData[m_CurrentChannel].m_HandleVal[i]);
+            m_EditData->m_EnvData[ch].setVal(
+                i, m_EditData->m_EnvData[m_CurrentChannel].m_HandleVal[i]);
         }
 
         m_TimeDivs[ch] = m_TimeDivs[m_CurrentChannel];
         m_Modes[ch] = m_Modes[m_CurrentChannel];
         m_Ranges[ch] = m_Ranges[m_CurrentChannel];
         m_bGateMode[ch] = m_bGateMode[m_CurrentChannel];
-
-        m_pEnvelope->setGateMode(ch, m_bGateMode[ch]);
-        m_pEnvelope->setMode(ch, m_Modes[ch]);
-        m_pEnvelope->setRange(ch, m_Ranges[ch]);
-        m_pEnvelope->setTimeDiv(ch, m_TimeDivs[ch]);
     }
 
     m_CurrentChannel = ch;
-    m_pButtonChSelect->Set(ch, true);
-    m_pButtonTimeSelect->Set(m_TimeDivs[ch], true);
-    m_pButtonModeSelect->Set(m_Modes[ch], true);
-    m_pButtonRangeSelect->Set(m_Ranges[ch], true);
-    m_pButtonGateMode->Set(m_bGateMode[ch]);
-    m_pEnvelope->setView(ch);
-}
-
-void SEQ_Envelope_8::doWidgetRefresh()
-{
-    auto az = this;
-    az->m_refreshWidgets = false;
-    for (auto ch = 0; ch < nCHANNELS; ch++)
-    {
-
-        // hold button
-        az->m_pButtonHold[ch]->Set(az->m_bHold[ch]);
-
-        az->m_pEnvelope->setGateMode(ch, az->m_bGateMode[ch]);
-        az->m_pEnvelope->setMode(ch, az->m_Modes[ch]);
-        az->m_pEnvelope->setRange(ch, az->m_Ranges[ch]);
-        az->m_pEnvelope->setTimeDiv(ch, az->m_TimeDivs[ch]);
-        az->m_pEnvelope->setPos(ch, az->m_HoldPos[ch]);
-    }
-
-    az->m_pEnvelope->setDataAll((int *)az->m_GraphData);
-
-    az->ChangeChannel(0);
+    m_refreshWidgets = true;
 }
 
 //-----------------------------------------------------
@@ -780,7 +760,7 @@ void SEQ_Envelope_8::process(const ProcessArgs &args)
         return;
 
     // global clock reset
-    m_pEnvelope->m_EditData->m_bClkReset =
+    m_EditData->m_bClkReset =
         m_SchTrigGlobalClkReset.process(inputs[INPUT_CLK_RESET].getNormalVoltage(0.0f));
 
     m_BeatCount++;
@@ -790,7 +770,7 @@ void SEQ_Envelope_8::process(const ProcessArgs &args)
     {
         // sprintf( strVal, "%d", m_BeatCount );
         // m_pTextLabel->text = strVal;
-        m_pEnvelope->setBeatLen(m_BeatCount);
+        m_EditData->setBeatLen(m_BeatCount);
         m_BeatCount = 0;
     }
 
@@ -807,25 +787,23 @@ void SEQ_Envelope_8::process(const ProcessArgs &args)
                 bGlobalTrig;
 
         if (bTrig)
-            m_pButtonTrig[ch]->Set(true);
+            m_bTrigCountdown[ch] = 5;
 
         if (bTrig || m_bTrig[ch])
             bTrig = true;
 
         bHold = (m_bHold[ch] || inputs[INPUT_CH_HOLD + ch].getNormalVoltage(0.0f) > 2.5f);
 
-        if (bHold && !m_pButtonHold[ch]->m_bOn)
-            m_pButtonHold[ch]->Set(true);
-        else if (!bHold && m_pButtonHold[ch]->m_bOn)
-            m_pButtonHold[ch]->Set(false);
+        if (bHold)
+            m_bHoldCountdown[ch] = 5;
 
         // process envelope
-        outputs[OUTPUT_CV + ch].setVoltage(m_pEnvelope->procStep(ch, bTrig, bHold));
+        outputs[OUTPUT_CV + ch].setVoltage(m_EditData->procStep(ch, bTrig, bHold));
 
         m_bTrig[ch] = false;
     }
 
-    m_pEnvelope->m_EditData->m_bClkReset = false;
+    m_EditData->m_bClkReset = false;
 }
 
 Model *modelSEQ_Envelope_8 = createModel<SEQ_Envelope_8, SEQ_Envelope_8_Widget>("SEQ_Envelope_8");
