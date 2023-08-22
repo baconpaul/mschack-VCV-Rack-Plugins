@@ -208,8 +208,6 @@ struct Widget_EnvelopeEdit : OpaqueWidget
 
     typedef void EnvelopeEditCALLBACK(void *pClass, float val);
 
-    EnvelopeData m_EnvData[MAX_ENVELOPE_CHANNELS] = {};
-
     bool m_bInitialized = false;
 
     int m_TimeDiv[MAX_ENVELOPE_CHANNELS] = {TIME_64th};
@@ -228,10 +226,14 @@ struct Widget_EnvelopeEdit : OpaqueWidget
 
     struct EditData
     {
+        EnvelopeData m_EnvData[MAX_ENVELOPE_CHANNELS] = {};
+
         float m_fband = 0.0f;
         bool m_bDraw = false;
         bool m_bClkReset = false;
-    } m_EditData;
+    };
+
+    std::shared_ptr<EditData> m_EditData;
 
     RGB_STRUCT m_HandleCol[ENVELOPE_HANDLES];
 
@@ -241,7 +243,8 @@ struct Widget_EnvelopeEdit : OpaqueWidget
     bool m_bClkd = false;
     bool m_bCtrl = false;
 
-    Widget_EnvelopeEdit(int x, int y, int w, int h, int handleSize, void *pClass,
+    Widget_EnvelopeEdit(int x, int y, int w, int h, int handleSize,
+                        std::shared_ptr<EditData> editData, void *pClass,
                         EnvelopeEditCALLBACK *pCallback, int nchannels);
 
     void setView(int ch);

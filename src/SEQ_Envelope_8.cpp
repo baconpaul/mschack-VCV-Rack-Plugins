@@ -46,9 +46,13 @@ struct SEQ_Envelope_8 : Module
 
     bool m_bInitialized = false;
 
+    std::shared_ptr<Widget_EnvelopeEdit::EditData> m_EditData;
+
     // Contructor
     SEQ_Envelope_8()
     {
+        m_EditData = std::make_shared<Widget_EnvelopeEdit::EditData>();
+
         config(nPARAMS, nINPUTS, nOUTPUTS, nLIGHTS);
 
         configParam(PARAM_BAND, 0.0, 0.8, 0.333, "Rubber Band Edit");
@@ -136,7 +140,7 @@ struct SEQ_Envelope_8 : Module
             mymodule = (SEQ_Envelope_8 *)paramQuantity->module;
 
             if (mymodule)
-                mymodule->m_pEnvelope->m_EditData.m_fband = paramQuantity->getValue();
+                mymodule->m_pEnvelope->m_EditData->m_fband = paramQuantity->getValue();
 
             RoundKnob::onChange(e);
         }
@@ -193,7 +197,7 @@ void SEQ_Envelope_8_DrawMode(void *pClass, int id, bool bOn)
         return;
 
     mymodule = (SEQ_Envelope_8 *)pClass;
-    mymodule->m_pEnvelope->m_EditData.m_bDraw = bOn;
+    mymodule->m_pEnvelope->m_EditData->m_bDraw = bOn;
 }
 
 //-----------------------------------------------------
@@ -312,7 +316,7 @@ void SEQ_Envelope_8_WaveSet(void *pClass, int id, bool bOn)
             mymodule->m_waveSet = EnvelopeData::nPRESETS - 1;
     }
 
-    mymodule->m_pEnvelope->m_EnvData[mymodule->m_CurrentChannel].Preset(mymodule->m_waveSet);
+    mymodule->m_pEnvelope->m_EditData->m_EnvData[mymodule->m_CurrentChannel].Preset(mymodule->m_waveSet);
 }
 
 //-----------------------------------------------------
@@ -331,7 +335,7 @@ void SEQ_Envelope_8_WaveInvert(void *pClass, int id, bool bOn)
     for (i = 0; i < ENVELOPE_HANDLES; i++)
         mymodule->m_pEnvelope->setVal(
             mymodule->m_CurrentChannel, i,
-            1.0f - mymodule->m_pEnvelope->m_EnvData[mymodule->m_CurrentChannel].m_HandleVal[i]);
+            1.0f - mymodule->m_pEnvelope->m_EditData->m_EnvData[mymodule->m_CurrentChannel].m_HandleVal[i]);
 }
 
 //-----------------------------------------------------
@@ -394,6 +398,8 @@ void SEQ_Envelope_8_Trig(void *pClass, int id, bool bOn)
     }
 }
 
+std::weak_ptr<Widget_EnvelopeEdit::EditData> S8W_browserEditData;
+
 //-----------------------------------------------------
 // Procedure:   Widget
 //
@@ -438,8 +444,25 @@ struct SEQ_Envelope_8_Widget : ModuleWidget
         addChild(pmod->m_pButtonSmooth);
 
         // envelope editor
+        std::shared_ptr<Widget_EnvelopeEdit::EditData> ed;
+        if (module)
+        {
+            ed = module->m_EditData;
+        }
+        else
+        {
+            if (auto ted = S8W_browserEditData.lock())
+            {
+                ed = ted;
+            }
+            else
+            {
+                ed = std::make_shared<Widget_EnvelopeEdit::EditData>();
+                S8W_browserEditData = ed;
+            }
+        }
         pmod->m_pEnvelope =
-            new Widget_EnvelopeEdit(47, 42, 416, 192, 7, module, EnvelopeEditCALLBACK, nCHANNELS);
+            new Widget_EnvelopeEdit(47, 42, 416, 192, 7, ed, module, EnvelopeEditCALLBACK, nCHANNELS);
         addChild(pmod->m_pEnvelope);
 
         // envelope select buttons
@@ -698,7 +721,7 @@ void SEQ_Envelope_8::ChangeChannel(int ch)
 
         for (i = 0; i < ENVELOPE_HANDLES; i++)
         {
-            m_pEnvelope->setVal(ch, i, m_pEnvelope->m_EnvData[m_CurrentChannel].m_HandleVal[i]);
+            m_pEnvelope->setVal(ch, i, m_pEnvelope->m_EditData->m_EnvData[m_CurrentChannel].m_HandleVal[i]);
         }
 
         m_TimeDivs[ch] = m_TimeDivs[m_CurrentChannel];
@@ -757,7 +780,7 @@ void SEQ_Envelope_8::process(const ProcessArgs &args)
         return;
 
     // global clock reset
-    m_pEnvelope->m_EditData.m_bClkReset =
+    m_pEnvelope->m_EditData->m_bClkReset =
         m_SchTrigGlobalClkReset.process(inputs[INPUT_CLK_RESET].getNormalVoltage(0.0f));
 
     m_BeatCount++;
@@ -802,7 +825,7 @@ void SEQ_Envelope_8::process(const ProcessArgs &args)
         m_bTrig[ch] = false;
     }
 
-    m_pEnvelope->m_EditData.m_bClkReset = false;
+    m_pEnvelope->m_EditData->m_bClkReset = false;
 }
 
 Model *modelSEQ_Envelope_8 = createModel<SEQ_Envelope_8, SEQ_Envelope_8_Widget>("SEQ_Envelope_8");

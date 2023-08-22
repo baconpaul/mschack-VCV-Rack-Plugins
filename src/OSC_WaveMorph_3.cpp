@@ -42,9 +42,13 @@ struct OSC_WaveMorph_3 : Module
 
     bool m_bInitialized = false;
 
+    std::shared_ptr<Widget_EnvelopeEdit::EditData> m_EditData;
+
     // Contructor
     OSC_WaveMorph_3()
     {
+        m_EditData = std::make_shared<Widget_EnvelopeEdit::EditData>();
+
         config(nPARAMS, nINPUTS, nOUTPUTS, nLIGHTS);
 
         configParam(PARAM_BAND, 0.0, 0.8, 0.333, "Draw Rubber Banding");
@@ -118,7 +122,7 @@ struct OSC_WaveMorph_3 : Module
             mymodule = (OSC_WaveMorph_3 *)paramQuantity->module;
 
             if (mymodule)
-                mymodule->m_pEnvelope->m_EditData.m_fband = paramQuantity->getValue();
+                mymodule->m_pEnvelope->m_EditData->m_fband = paramQuantity->getValue();
 
             RoundKnob::onChange(e);
         }
@@ -161,7 +165,7 @@ void OSC_WaveMorph_3_DrawMode(void *pClass, int id, bool bOn)
 {
     OSC_WaveMorph_3 *mymodule;
     mymodule = (OSC_WaveMorph_3 *)pClass;
-    mymodule->m_pEnvelope->m_EditData.m_bDraw = bOn;
+    mymodule->m_pEnvelope->m_EditData->m_bDraw = bOn;
 }
 
 //-----------------------------------------------------
@@ -204,7 +208,7 @@ void OSC_WaveMorph_3_WaveSet(void *pClass, int id, bool bOn)
             mymodule->m_waveSet = EnvelopeData::nPRESETS - 1;
     }
 
-    mymodule->m_pEnvelope->m_EnvData[mymodule->m_CurrentChannel].Preset(mymodule->m_waveSet);
+    mymodule->m_pEnvelope->m_EditData->m_EnvData[mymodule->m_CurrentChannel].Preset(mymodule->m_waveSet);
 }
 
 //-----------------------------------------------------
@@ -219,7 +223,7 @@ void OSC_WaveMorph_3_WaveInvert(void *pClass, int id, bool bOn)
     for (i = 0; i < ENVELOPE_HANDLES; i++)
         mymodule->m_pEnvelope->setVal(
             mymodule->m_CurrentChannel, i,
-            1.0f - mymodule->m_pEnvelope->m_EnvData[mymodule->m_CurrentChannel].m_HandleVal[i]);
+            1.0f - mymodule->m_pEnvelope->m_EditData->m_EnvData[mymodule->m_CurrentChannel].m_HandleVal[i]);
 }
 
 //-----------------------------------------------------
@@ -246,6 +250,7 @@ void OSC_WaveMorph_3_WaveCopy(void *pClass, int id, bool bOn)
     mymodule->m_bCpy = bOn;
 }
 
+std::weak_ptr<Widget_EnvelopeEdit::EditData> O3W_browserEditData;
 //-----------------------------------------------------
 // Procedure:   Widget
 //
@@ -281,13 +286,30 @@ struct OSC_WaveMorph_3_Widget : ModuleWidget
         addChild(pmod->m_pButtonInvert);
 
         // envelope editor
+        std::shared_ptr<Widget_EnvelopeEdit::EditData> ed;
+        if (module)
+        {
+            ed = module->m_EditData;
+        }
+        else
+        {
+            if (auto ted = O3W_browserEditData.lock())
+            {
+                ed = ted;
+            }
+            else
+            {
+                ed = std::make_shared<Widget_EnvelopeEdit::EditData>();
+                O3W_browserEditData = ed;
+            }
+        }
         pmod->m_pEnvelope = new Widget_EnvelopeEdit(
-            16, 47, 208, 96, 5, module, OSC_WaveMorph_3_EnvelopeEditCALLBACK, nCHANNELS);
+            16, 47, 208, 96, 5, ed, module, OSC_WaveMorph_3_EnvelopeEditCALLBACK, nCHANNELS);
         addChild(pmod->m_pEnvelope);
 
-        pmod->m_pEnvelope->m_EnvData[0].m_Range = EnvelopeData::RANGE_Audio;
-        pmod->m_pEnvelope->m_EnvData[1].m_Range = EnvelopeData::RANGE_Audio;
-        pmod->m_pEnvelope->m_EnvData[2].m_Range = EnvelopeData::RANGE_Audio;
+        pmod->m_pEnvelope->m_EditData->m_EnvData[0].m_Range = EnvelopeData::RANGE_Audio;
+        pmod->m_pEnvelope->m_EditData->m_EnvData[1].m_Range = EnvelopeData::RANGE_Audio;
+        pmod->m_pEnvelope->m_EditData->m_EnvData[2].m_Range = EnvelopeData::RANGE_Audio;
 
         // solo button
         pmod->m_pButtonSolo =
@@ -484,7 +506,7 @@ void OSC_WaveMorph_3::ChangeChannel(int ch)
 
         for (i = 0; i < ENVELOPE_HANDLES; i++)
         {
-            m_pEnvelope->setVal(ch, i, m_pEnvelope->m_EnvData[m_CurrentChannel].m_HandleVal[i]);
+            m_pEnvelope->setVal(ch, i, m_pEnvelope->m_EditData->m_EnvData[m_CurrentChannel].m_HandleVal[i]);
         }
     }
 
@@ -619,7 +641,7 @@ void OSC_WaveMorph_3::process(const ProcessArgs &args)
     // process each channel
     for (ch = 0; ch < nCHANNELS; ch++)
     {
-        m_pEnvelope->m_EnvData[ch].m_Clock.syncInc =
+        m_pEnvelope->m_EditData->m_EnvData[ch].m_Clock.syncInc =
             32.7032f *
             clamp(powf(2.0f, clamp(inputs[INPUT_VOCT].getNormalVoltage(4.0f), 0.0f, VOCT_MAX)),
                   0.0f, 4186.01f);
