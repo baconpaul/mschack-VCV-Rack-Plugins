@@ -1,12 +1,12 @@
 # mscHack Plugins 
 
 The mscHack plugins [here](https://github.com/mschack/VCV-Rack-Plugins) were 
-never ported to Rack 2.0. This repo is a fork and fix of mscRack 1.1.0 by pgatt and baconpaul
-trying to bring these back.  The originsl author had indicated they are happy for us to proceed with this sttempt.
+never ported to Rack 2.0. This repo is a fork of mscRack 1.1.0 by pgatt and baconpaul
+attempting to bring these back.  The originsl author has indicated they are happy for us to proceed with this attempt.
 
 A few notes
 
-- Please report issue [here](https://github.com/baconpaul/mschack-VCV-Rack-Plugins/issues/) and
+- Please report issues [here](https://github.com/baconpaul/mschack-VCV-Rack-Plugins/issues/) and
 not to the original author
 - Please check @pgatt's longer post on the community forum for discussion and details
 - If there are too many bugs in community testing, we may still abandon the project! It's a bit of a side-quest
