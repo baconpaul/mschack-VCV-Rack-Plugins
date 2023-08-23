@@ -722,8 +722,6 @@ void ARP700::Copy(bool bOn)
 //-----------------------------------------------------
 void ARP700::ChangePattern(int index, bool bForce)
 {
-    int note, param;
-
     if (!bForce && index == m_PatCtrl.pat)
         return;
 
@@ -739,7 +737,6 @@ void ARP700::ChangePattern(int index, bool bForce)
         {
             memcpy(&m_PatternSave[index], &m_PatternSave[m_PatCtrl.pat],
                    sizeof(ARP_PATTERN_STRUCT));
-            // m_pButtonCopy->Set(false);
             m_bCopySrc = false;
         }
     }

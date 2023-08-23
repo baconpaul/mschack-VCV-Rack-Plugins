@@ -686,13 +686,11 @@ void SEQ_Envelope_8::dataFromJson(json_t *root)
 //-----------------------------------------------------
 void SEQ_Envelope_8::onReset()
 {
-    int ch;
-
     memset(m_GraphData, 0, sizeof(m_GraphData));
     memset(m_bGateMode, 0, sizeof(m_bGateMode));
     memset(m_Modes, 0, sizeof(m_Modes));
     memset(m_Ranges, 0, sizeof(m_Ranges));
-    memset(m_EditData->m_EnvData, 0, sizeof(m_EditData->m_EnvData));
+    m_EditData->setDataAll((int *)m_GraphData);
     memset(m_bHold, 0, sizeof(m_bHold));
 
     ChangeChannel(0);

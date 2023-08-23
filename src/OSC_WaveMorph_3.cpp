@@ -79,6 +79,7 @@ struct OSC_WaveMorph_3 : Module
     dsp::SchmittTrigger m_SchmittChangeWave;
 
     std::atomic<bool> m_refreshWidgets{false};
+    std::string m_sTextLabel;
 
     // filter
     enum FILTER_TYPES
@@ -141,8 +142,7 @@ void OSC_WaveMorph_3_EnvelopeEditCALLBACK(void *pClass, float val)
 
     snprintf(strVal, 10, "[%.3fV]", val);
 
-    // FIXME
-    // mymodule->m_pTextLabel->text = strVal;
+    mymodule->m_sTextLabel = strVal;
 }
 
 //-----------------------------------------------------
@@ -410,6 +410,7 @@ struct OSC_WaveMorph_3_Widget : ModuleWidget
                 m_pButtonChSelect->Set(az->m_CurrentChannel, true);
                 m_pEnvelope->setView(az->m_CurrentChannel);
             }
+            m_pTextLabel->text = az->m_sTextLabel;
         }
         Widget::step();
     }
@@ -492,8 +493,6 @@ void OSC_WaveMorph_3::onRandomize()
 //-----------------------------------------------------
 void OSC_WaveMorph_3::ChangeChannel(int ch)
 {
-    int i;
-
     if (ch < 0 || ch >= nCHANNELS)
         return;
 

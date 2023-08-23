@@ -115,7 +115,7 @@ void Widget_EnvelopeEdit::EditData::smoothWave(int ch, float amt)
     // gross hack for quick port
     auto m_EditData = this;
 
-    if (ch < MAX_ENVELOPE_CHANNELS && ch >= 0)
+    if (ch >= MAX_ENVELOPE_CHANNELS || ch < 0)
         return;
 
     for (int j = 0; j < ENVELOPE_HANDLES; j++)

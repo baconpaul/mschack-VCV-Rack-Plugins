@@ -1759,7 +1759,7 @@ struct PatternSelectStrip : OpaqueWidget
     {
         if (layer == 1)
         {
-            float xi, yi;
+            float xi;
             for (auto i = 0; i <= m_MaxPat; i++)
             {
                 nvgFillColor(args.vg,
