@@ -15,7 +15,7 @@ for both of us.
 ![screenshot](modules.PNG)
 
 # Updates
-- Aug 23 23 [v2.0.0]
+- 23 August 23 [v2.0.0]
 	- baconpaul and pgatt attempt a port over to Rack 2. Gulp!
 - 10 July 19 [v1.0.2]
 	-Re-added compressor
