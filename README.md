@@ -9,7 +9,7 @@ A few notes
 - Please report issue [here](https://github.com/baconpaul/mschack-VCV-Rack-Plugins/issues/) and
 not to the original author
 - Please check @pgatt's longer post on the community forum for discussion and details
-- If theres too many bugs in community testing, we may still abandon the project! It's a bit of a side-quest
+- If there are too many bugs in community testing, we may still abandon the project! It's a bit of a side-quest
 for both of ush.
 
 
