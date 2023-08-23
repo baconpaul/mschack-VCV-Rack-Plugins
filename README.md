@@ -10,7 +10,7 @@ A few notes
 not to the original author
 - Please check @pgatt's longer post on the community forum for discussion and details
 - If there are too many bugs in community testing, we may still abandon the project! It's a bit of a side-quest
-for both of ush.
+for both of us.
 
 
 ![screenshot](modules.PNG)
