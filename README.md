@@ -6,16 +6,20 @@ trying to bring these back.  The originsl author had indicated they are happy fo
 
 A few notes
 
-1. Please report issue [here](https://github.com/baconpaul/mschack-VCV-Rack-Plugins/issues/) and
+- Please report issue [here](https://github.com/baconpaul/mschack-VCV-Rack-Plugins/issues/) and
 not to the original author
-2. Please check @pgatt's longer post on the community forum for discussion and details
-3. We may decide to abandon this project, even though the port is materially
-complete. With the original author not responding, a path to the library is 
-still a bit murky.
+- Please check @pgatt's longer post on the community forum for discussion and details
+- If theres too many bugs in community testing, we may still abandon the project! It's a bit of a side-quest
+for both of ush.
+
 
 ![screenshot](modules.PNG)
 
 # Updates
+- Aug 23 23 [v2.0.0]
+	- baconpaul and pgatt try a rack 2 port. Gulp!
+
+
 - 10 July 19 [v1.0.2]
 	-Re-added compressor
 	-New Module "Lorenz" noise generator
