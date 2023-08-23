@@ -17,9 +17,7 @@ for both of us.
 
 # Updates
 - Aug 23 23 [v2.0.0]
-	- baconpaul and pgatt try a rack 2 port. Gulp!
-
-
+	- baconpaul and pgatt attempt a port over to Rack 2. Gulp!
 - 10 July 19 [v1.0.2]
 	-Re-added compressor
 	-New Module "Lorenz" noise generator
