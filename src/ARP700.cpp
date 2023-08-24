@@ -827,6 +827,7 @@ stepfound:
         if (m_PatCtrl.pending.bPending)
         {
             m_PatCtrl.pending.bPending = false;
+            m_iPendingPattern = -1;
             ChangePattern(m_PatCtrl.pending.pat, true);
         }
     }
@@ -884,6 +885,7 @@ void ARP700::process(const ProcessArgs &args)
         if (m_PatCtrl.pending.bPending)
         {
             m_PatCtrl.pending.bPending = false;
+            m_iPendingPattern = -1;
             ChangePattern(m_PatCtrl.pending.pat, false);
         }
 
@@ -942,6 +944,7 @@ void ARP700::process(const ProcessArgs &args)
         if (m_PatCtrl.pending.bPending)
         {
             m_PatCtrl.pending.bPending = false;
+            m_iPendingPattern = -1;
             ChangePattern(m_PatCtrl.pending.pat, false);
         }
     }

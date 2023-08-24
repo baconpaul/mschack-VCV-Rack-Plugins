@@ -376,7 +376,7 @@ void _RouteCallback(void *pClass, int id, int nbutton, bool bOn)
 
 struct _GroupPreMute : MenuItem
 {
-    Mixer_ *menumod;
+    Mixer_ *menumod{nullptr};
 
     void onAction(const event::Action &e) override
     {
@@ -388,7 +388,7 @@ struct _GroupPreMute : MenuItem
 
 struct _Gainx2 : MenuItem
 {
-    Mixer_ *menumod;
+    Mixer_ *menumod{nullptr};
 
     void onAction(const event::Action &e) override
     {
@@ -400,7 +400,7 @@ struct _Gainx2 : MenuItem
 
 struct _AuxIgnoreSolo : MenuItem
 {
-    Mixer_ *menumod;
+    Mixer_ *menumod{nullptr};
 
     void onAction(const event::Action &e) override
     {

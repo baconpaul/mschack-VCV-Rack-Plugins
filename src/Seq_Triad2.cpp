@@ -375,7 +375,7 @@ void MyLEDButton_Copy(void *pClass, int id, bool bOn)
 //-----------------------------------------------------
 struct Seq_Triad2_Ch1Reset : MenuItem
 {
-    Seq_Triad2 *menumod;
+    Seq_Triad2 *menumod{nullptr};
 
     void onAction(const event::Action &e) override
     {
@@ -387,7 +387,7 @@ struct Seq_Triad2_Ch1Reset : MenuItem
 
 struct Seq_Triad2_Ch2Reset : MenuItem
 {
-    Seq_Triad2 *menumod;
+    Seq_Triad2 *menumod{nullptr};
 
     void onAction(const event::Action &e) override
     {
@@ -399,7 +399,7 @@ struct Seq_Triad2_Ch2Reset : MenuItem
 
 struct Seq_Triad2_Ch3Reset : MenuItem
 {
-    Seq_Triad2 *menumod;
+    Seq_Triad2 *menumod{nullptr};
 
     void onAction(const event::Action &e) override
     {
@@ -1031,6 +1031,7 @@ void Seq_Triad2::process(const ProcessArgs &args)
         if (bGlobalClkReset && !m_bPause[kb])
         {
             m_PatternPending[kb].bPending = false;
+            m_iPendingPattern[kb] = -1;
 
             ChangeStep(kb, 0, true, false);
 

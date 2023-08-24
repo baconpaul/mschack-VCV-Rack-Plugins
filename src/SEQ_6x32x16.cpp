@@ -59,7 +59,7 @@ struct SEQ_6x32x16 : Module
     int m_MaxProg[nCHANNELS] = {};
     int m_PatClk[nCHANNELS]{};
 
-    std::array<std::atomic<int>,nCHANNELS> m_iPendingPattern{};
+    std::array<std::atomic<int>, nCHANNELS> m_iPendingPattern{};
 
     PHRASE_CHANGE_STRUCT m_ProgPending[nCHANNELS] = {};
 
@@ -310,7 +310,7 @@ void SEQ_6x32x16_ProgramChangeCallback(void *pClass, int ch, int pat, int max)
 //-----------------------------------------------------
 struct SEQ_6x32x16_CVRange : MenuItem
 {
-    SEQ_6x32x16 *menumod;
+    SEQ_6x32x16 *menumod{nullptr};
 
     void onAction(const event::Action &e) override
     {
@@ -833,6 +833,7 @@ void SEQ_6x32x16::process(const ProcessArgs &args)
             if (m_ProgPending[ch].bPending)
             {
                 m_ProgPending[ch].bPending = false;
+                m_iPendingPattern[ch] = -1;
                 ChangeProg(ch, m_ProgPending[ch].prog, true);
             }
 
@@ -844,6 +845,7 @@ void SEQ_6x32x16::process(const ProcessArgs &args)
         {
             SetPendingProg(ch, -1);
             m_ProgPending[ch].bPending = false;
+            m_iPendingPattern[ch] = -1;
             ChangeProg(ch, m_ProgPending[ch].prog, true);
             bTrigOut = (m_Pattern[ch][m_CurrentProg[ch]][m_PatClk[ch]]);
         }
@@ -851,6 +853,7 @@ void SEQ_6x32x16::process(const ProcessArgs &args)
         else if (m_ProgPending[ch].bPending && bClockAtZero)
         {
             m_ProgPending[ch].bPending = false;
+            m_iPendingPattern[ch] = -1;
             ChangeProg(ch, m_ProgPending[ch].prog, false);
             bTrigOut = (m_Pattern[ch][m_CurrentProg[ch]][m_PatClk[ch]]);
         }
