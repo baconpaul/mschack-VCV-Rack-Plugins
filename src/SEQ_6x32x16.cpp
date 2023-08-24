@@ -1,4 +1,5 @@
 #include "mscHack.hpp"
+#include <array>
 
 #define nCHANNELS 6
 #define nSTEPS 32
@@ -58,7 +59,7 @@ struct SEQ_6x32x16 : Module
     int m_MaxProg[nCHANNELS] = {};
     int m_PatClk[nCHANNELS]{};
 
-    std::atomic<int> m_iPendingPattern[3]{-1, -1, -1};
+    std::array<std::atomic<int>,nCHANNELS> m_iPendingPattern{};
 
     PHRASE_CHANGE_STRUCT m_ProgPending[nCHANNELS] = {};
 
@@ -104,6 +105,7 @@ struct SEQ_6x32x16 : Module
     // Contructor
     SEQ_6x32x16()
     {
+        std::fill(m_iPendingPattern.begin(), m_iPendingPattern.end(), -1);
         config(nPARAMS, nINPUTS, nOUTPUTS, 0);
 
         for (int i = 0; i < nCHANNELS; i++)

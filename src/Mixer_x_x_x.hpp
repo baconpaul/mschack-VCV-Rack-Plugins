@@ -1107,12 +1107,14 @@ void Mixer_::process(const ProcessArgs &args)
             if (inputs[IN_LEFT + ch].isConnected() || inputs[IN_RIGHT + ch].isConnected())
                 bChannelActive = true;
         }
-        else if (section == SGROUP)
+        else if (section == SGROUP && ch >= nINCHANNELS)
         {
+#if nGROUPS > 0
             group = ch - nINCHANNELS;
 
             if (bGroupActive[group])
                 bChannelActive = true;
+#endif
         }
 
         if (bChannelActive)
