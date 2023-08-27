@@ -83,7 +83,15 @@ struct Windz : Module
 
         putseed((int)random::u32());
 
-        configParam(PARAM_SPEED, 0.0, 8.0, 4.0, "Morph speed");
+        std::vector<std::string> speedLabels;
+        for (int i = 0; i < 9; ++i)
+        {
+            char strVal[10];
+            snprintf(strVal, 10, "x%.2f", speeds[i]);
+            speedLabels.emplace_back(strVal);
+        }
+
+        configSwitch(PARAM_SPEED, 0.0, 8.0, 4.0, "Morph speed", speedLabels);
         configInput(IN_RANDTRIG, "Seed Randomization");
         configOutput(OUT_L, "Left Windz");
         configOutput(OUT_R, "Right Windz");
@@ -109,34 +117,6 @@ struct Windz : Module
     int m_FadeState = FADE_IN;
     float m_fFade = 0.0f;
     float speeds[9] = {0.01f, 0.1f, 0.50f, 0.75f, 1.0f, 1.5f, 2.0f, 4.0f, 8.0f};
-
-    //-----------------------------------------------------
-    // MySpeed_Knob
-    //-----------------------------------------------------
-    struct MySpeed_Knob : MSCH_Widget_Knob1
-    {
-        MySpeed_Knob()
-        {
-            snap = true;
-            set(DWRGB(255, 255, 0), DWRGB(0, 0, 0), 13.0f);
-        }
-
-        void onChange(const event::Change &e) override
-        {
-            Windz *mymodule;
-            char strVal[10] = {};
-
-            MSCH_Widget_Knob1::onChange(e);
-            ParamQuantity *paramQuantity = getParamQuantity();
-            mymodule = (Windz *)paramQuantity->module;
-
-            if (!mymodule)
-                return;
-
-            snprintf(strVal, 10, "x%.2f", mymodule->speeds[(int)paramQuantity->getValue()]);
-            mymodule->m_sLabel2 = strVal;
-        }
-    };
 
     void putx(int x);
     void putf(float fval);
@@ -199,6 +179,8 @@ struct Windz_Widget : ModuleWidget
     Label *m_pTextLabel{nullptr};
     Label *m_pTextLabel2{nullptr};
 
+    int m_iLastSpeed{-1};
+
     MyLEDButton *m_pButtonSeed[32]{};
     MyLEDButton *m_pButtonRand{nullptr};
 
@@ -247,7 +229,9 @@ struct Windz_Widget : ModuleWidget
             }
         }
 
-        addParam(createParam<Windz::MySpeed_Knob>(Vec(10, 280), module, Windz::PARAM_SPEED));
+        auto kb = createParam<MSCH_Widget_Knob1>(Vec(10, 280), module, Windz::PARAM_SPEED);
+        kb->set(DWRGB(255, 255, 0), DWRGB(0, 0, 0), 13.0f);
+        addParam(kb);
 
         m_pTextLabel2 = new Label();
         m_pTextLabel2->box.pos = Vec(30, 280);
@@ -261,11 +245,6 @@ struct Windz_Widget : ModuleWidget
 
         addChild(createWidget<ScrewSilver>(Vec(30, 0)));
         addChild(createWidget<ScrewSilver>(Vec(30, 365)));
-
-        if (module)
-        {
-            module->BuildDrone();
-        }
     }
 
     void step() override
@@ -273,6 +252,13 @@ struct Windz_Widget : ModuleWidget
         auto az = dynamic_cast<Windz *>(module);
         if (az)
         {
+            if (m_iLastSpeed != (int)az->paramQuantities[Windz::PARAM_SPEED]->getValue())
+            {
+                m_iLastSpeed = (int)az->paramQuantities[Windz::PARAM_SPEED]->getValue();
+                char strVal[10] = {};
+                snprintf(strVal, 10, "x%.2f", az->speeds[m_iLastSpeed]);
+                az->m_sLabel2 = strVal;
+            }
             if (m_pTextLabel->text != az->m_sLabel1)
                 m_pTextLabel->text = az->m_sLabel1;
             if (m_pTextLabel2->text != az->m_sLabel2)
@@ -323,14 +309,9 @@ json_t *Windz::dataToJson()
 //-----------------------------------------------------
 void Windz::dataFromJson(json_t *root)
 {
-    // char strVal[ 10 ] = {};
-
     JsonParams(FROMJSON, root);
 
     ChangeSeedPending(m_Seed);
-
-    // sprintf( strVal, "x%.2f", speeds[ (int)params[ PARAM_SPEED ].value ] );
-    // m_pTextLabel2->text = strVal;
 }
 
 //-----------------------------------------------------
