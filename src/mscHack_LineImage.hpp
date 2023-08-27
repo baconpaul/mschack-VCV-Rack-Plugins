@@ -74,6 +74,7 @@ struct Widget_LineImage : TransparentWidget
         if (layer != 1)
             return;
 
+        nvgScissor(args.vg, 0, 0, box.size.x, box.size.y);
         Vec *pv; //, *last, *next, dl, dn;
         unsigned char index;
 

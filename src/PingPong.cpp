@@ -65,7 +65,7 @@ struct PingPong : Module
 
     FILTER_PARAM_STRUCT m_Filter[2];
 
-    float m_fCutoff = 0.0;
+    float m_fCutoff = 0.0, m_fCutoffParam{-1.f};
     float m_LastOut[2] = {};
     float m_DelayBuffer[2][DELAY_BUFF_LEN];
 
@@ -150,27 +150,6 @@ void PingPong_Reverse(void *pClass, int id, bool bOn)
 }
 
 //-----------------------------------------------------
-// MyEQHi_Knob
-//-----------------------------------------------------
-struct MyCutoffKnob : Knob_Green1_40
-{
-    PingPong *mymodule;
-
-    void onChange(const event::Change &e) override
-    {
-        ParamQuantity *paramQuantity = getParamQuantity();
-        mymodule = (PingPong *)paramQuantity->module;
-
-        if (mymodule)
-        {
-            mymodule->ChangeFilterCutoff(paramQuantity->getValue());
-        }
-
-        RoundKnob::onChange(e);
-    }
-};
-
-//-----------------------------------------------------
 // Procedure:   Widget
 //
 //-----------------------------------------------------
@@ -200,7 +179,7 @@ struct PingPong_Widget : ModuleWidget
 
         // Filter/Res knobs
         addParam(createParam<FilterSelectToggle>(Vec(66, 55), module, PingPong::PARAM_FILTER_MODE));
-        addParam(createParam<MyCutoffKnob>(Vec(23, 60), module, PingPong::PARAM_CUTOFF));
+        addParam(createParam<Knob_Green1_40>(Vec(23, 60), module, PingPong::PARAM_CUTOFF));
         addParam(createParam<Knob_Purp1_20>(Vec(73, 79), module, PingPong::PARAM_Q));
 
         // L Feedback
@@ -288,6 +267,7 @@ void PingPong::dataFromJson(json_t *rootJ)
 //-----------------------------------------------------
 void PingPong::ChangeFilterCutoff(float cutfreq)
 {
+    m_fCutoffParam = cutfreq;
     float fx, fx2, fx3, fx5, fx7;
 
     // clamp at 1.0 and 20/samplerate
@@ -385,6 +365,11 @@ void PingPong::process(const ProcessArgs &args)
     dL = params[PARAM_DELAYL].getValue() * MAC_DELAY_SECONDS * args.sampleRate;
     dR = params[PARAM_DELAYR].getValue() * MAC_DELAY_SECONDS * args.sampleRate;
 
+    if (std::fabs(params[PARAM_CUTOFF].getValue() - m_fCutoffParam) > 1e-6f)
+    {
+        ChangeFilterCutoff(params[PARAM_CUTOFF].getValue());
+    }
+
     if (m_SchmittReverse.process(inputs[INPUT_GNIP_TOGGLE].getVoltage()))
     {
         m_bReverseState = !m_bReverseState;
@@ -450,7 +435,7 @@ void PingPong::process(const ProcessArgs &args)
     // check right channel first for possible mono
     if (inputs[INPUT_R].isConnected())
     {
-        inR = inputs[INPUT_R].getVoltage();
+        inR = inputs[INPUT_R].getVoltageSum();
         inR = Filter(R, inR);
         inOrigR = inR;
         bMono = false;
@@ -461,7 +446,7 @@ void PingPong::process(const ProcessArgs &args)
     // left channel
     if (inputs[INPUT_L].isConnected())
     {
-        inL = inputs[INPUT_L].getVoltage();
+        inL = inputs[INPUT_L].getVoltageSum();
         inL = Filter(L, inL);
         inOrigL = inL;
 

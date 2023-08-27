@@ -5,6 +5,8 @@ project(mscHack VERSION 1.0 LANGUAGES C CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+# set(CMAKE_CXX_CPPCHECK /opt/homebrew/bin/cppcheck) #--enable=all)
+
 set(PLUGIN_NAME ${PROJECT_NAME})
 set(ADDITIONAL_PLUGIN_DISTRIBUTABLES res LICENSE.txt README.md)
 include(RackSDK.cmake)
