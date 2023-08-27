@@ -60,8 +60,6 @@ struct ASAF8 : Module
 
     ENV_SEG m_EnvSeg[nENVELOPE_SEGS] = {};
 
-    std::string m_sLabel;
-
     // Contructor
     ASAF8()
     {
@@ -75,8 +73,8 @@ struct ASAF8 : Module
 
         for (int i = 0; i < nCHANNELS; i++)
         {
-            configParam(PARAM_SPEED_IN + i, 0.05f, 40.0f, 5.0f, "Fade In Speed");
-            configParam(PARAM_SPEED_OUT + i, 0.05f, 40.0f, 5.0f, "Fade Out Speed");
+            configParam(PARAM_SPEED_IN + i, 0.05f, 40.0f, 5.0f, "Fade In Speed", "s");
+            configParam(PARAM_SPEED_OUT + i, 0.05f, 40.0f, 5.0f, "Fade Out Speed", "s");
 
             auto s = std::to_string(i + 1);
             configInput(IN_TRIGS + i, "Gate " + s);
@@ -87,28 +85,6 @@ struct ASAF8 : Module
             configOutput(OUT_AUDIOR + i, "Right " + s);
         }
     }
-
-    //-----------------------------------------------------
-    // spd_Knob
-    //-----------------------------------------------------
-    struct spd_Knob : Knob_Green1_15
-    {
-        ASAF8 *mymodule;
-        int param;
-        char strVal[10] = {};
-
-        void onChange(const event::Change &e) override
-        {
-            ParamQuantity *paramQuantity = getParamQuantity();
-            mymodule = (ASAF8 *)paramQuantity->module;
-
-            snprintf(strVal, 10, "[%.2fs]", paramQuantity->getValue());
-
-            mymodule->m_sLabel = strVal;
-
-            RoundKnob::onChange(e);
-        }
-    };
 
     void envSeg_from_points(float x1, float y1, float x2, float y2, ENV_SEG *L);
 
@@ -144,7 +120,6 @@ void ASAF8_TrigButton(void *pClass, int id, bool bOn)
 struct ASAF8_Widget : ModuleWidget
 {
     MyLEDButton *m_pTrigButton[nCHANNELS]{};
-    Label *m_pTextLabel = NULL;
     ASAF8_Widget(ASAF8 *module)
     {
         int x, y;
@@ -153,11 +128,6 @@ struct ASAF8_Widget : ModuleWidget
         setModule(module);
 
         setPanel(APP->window->loadSvg(asset::plugin(thePlugin, "res/ASAF8.svg")));
-
-        m_pTextLabel = new Label();
-        m_pTextLabel->box.pos = Vec(90, 28);
-        m_pTextLabel->text = "----";
-        addChild(m_pTextLabel);
 
         x = 3;
         y = 77;
@@ -179,9 +149,9 @@ struct ASAF8_Widget : ModuleWidget
 
             // speed knobs
             addParam(
-                createParam<ASAF8::spd_Knob>(Vec(x + 94, y), module, ASAF8::PARAM_SPEED_IN + ch));
+                createParam<Knob_Green1_15>(Vec(x + 94, y), module, ASAF8::PARAM_SPEED_IN + ch));
             addParam(
-                createParam<ASAF8::spd_Knob>(Vec(x + 115, y), module, ASAF8::PARAM_SPEED_OUT + ch));
+                createParam<Knob_Green1_15>(Vec(x + 115, y), module, ASAF8::PARAM_SPEED_OUT + ch));
 
             // outputs
             addOutput(
@@ -203,8 +173,6 @@ struct ASAF8_Widget : ModuleWidget
         auto az = dynamic_cast<ASAF8 *>(module);
         if (az)
         {
-            if (m_pTextLabel->text != az->m_sLabel)
-                m_pTextLabel->text = az->m_sLabel;
             for (int i = 0; i < nCHANNELS; i++)
             {
                 m_pTrigButton[i]->Set(az->m_Triggered[i]);
