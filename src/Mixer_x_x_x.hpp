@@ -1041,7 +1041,10 @@ void Mixer_::process(const ProcessArgs &args)
     float fx, fy, fade[MAX_GROUPS];
 #endif
     float auxL[nAUX] = {}, auxR[nAUX] = {};
-    bool bChannelActive, bGroupActive[MAX_GROUPS] = {false};
+    bool bChannelActive;
+#if nGROUPS > 0
+    bool bGroupActive[MAX_GROUPS] = {false};
+#endif
     float pan, levelmult = 1.0;
 
     if (m_StartCount)
