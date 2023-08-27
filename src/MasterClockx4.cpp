@@ -70,10 +70,20 @@ struct MasterClockx4 : Module
 
         configParam(PARAM_BPM, 60.0, 220.0, 120.0, "Beats Per Minute");
 
+        std::vector<std::string> clockLabels;
+        for (int i = 0; i < CLOCK_DIVS; ++i)
+        {
+            if (i < MID_INDEX)
+                clockLabels.push_back("/ " + std::to_string(multdisplayval[i]));
+            else if (i == MID_INDEX)
+                clockLabels.push_back("1");
+            else
+                clockLabels.push_back("x " + std::to_string(multdisplayval[i]));
+        }
         for (int i = 0; i < nCHANNELS; i++)
         {
-            configParam(PARAM_MULT + i, 0.0f, (float)(CLOCK_DIVS - 1), (float)(MID_INDEX),
-                        "Clock Mult/Div");
+            configSwitch(PARAM_MULT + i, 0.0f, (float)(CLOCK_DIVS - 1), (float)(MID_INDEX),
+                         "Clock Mult/Div", clockLabels);
         }
 
         configParam(PARAM_HUMANIZE, 0.0f, 1.0f, 0.0f, "Humanize clock");
