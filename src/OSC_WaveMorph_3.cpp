@@ -211,7 +211,7 @@ void OSC_WaveMorph_3_WaveInvert(void *pClass, int id, bool bOn)
     mymodule = (OSC_WaveMorph_3 *)pClass;
 
     for (i = 0; i < ENVELOPE_HANDLES; i++)
-        mymodule->m_EditData->m_EnvData[id].setVal(
+        mymodule->m_EditData->m_EnvData[mymodule->m_CurrentChannel].setVal(
             i, 1.0f - mymodule->m_EditData->m_EnvData[mymodule->m_CurrentChannel].m_HandleVal[i]);
     mymodule->m_refreshWidgets = true;
 }
@@ -226,7 +226,7 @@ void OSC_WaveMorph_3_WaveRand(void *pClass, int id, bool bOn)
     mymodule = (OSC_WaveMorph_3 *)pClass;
 
     for (i = 0; i < ENVELOPE_HANDLES; i++)
-        mymodule->m_EditData->m_EnvData[id].setVal(i, random::uniform());
+        mymodule->m_EditData->m_EnvData[mymodule->m_CurrentChannel].setVal(i, random::uniform());
     mymodule->m_refreshWidgets = true;
 }
 
@@ -498,6 +498,11 @@ void OSC_WaveMorph_3::ChangeChannel(int ch)
 
     if (m_bCpy)
     {
+        for (auto i = 0; i < ENVELOPE_HANDLES; i++)
+        {
+            m_EditData->m_EnvData[ch].setVal(
+                i, m_EditData->m_EnvData[m_CurrentChannel].m_HandleVal[i]);
+        }
         m_bCpy = false;
     }
 
