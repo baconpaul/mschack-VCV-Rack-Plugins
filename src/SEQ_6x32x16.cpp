@@ -151,7 +151,7 @@ struct SEQ_6x32x16 : Module
         m_PatClk[ch]++;
 
         if (m_PatClk[ch] < 0 || m_PatClk[ch] > m_MaxPat[ch][m_CurrentProg[ch]] ||
-            m_PatClk[ch] >= nPROG)
+            m_PatClk[ch] >= nSTEPS)
             m_PatClk[ch] = 0;
 
         return m_PatClk[ch] == 0;
