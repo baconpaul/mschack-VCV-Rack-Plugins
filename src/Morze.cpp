@@ -130,6 +130,8 @@ struct Morze : Module
 
     void process(const ProcessArgs &args) override;
 
+    void onReset() override;
+
     json_t *dataToJson() override;
 
     void dataFromJson(json_t *rootJ) override;
@@ -176,7 +178,8 @@ struct Morze_Widget : ModuleWidget
         m_TextField = tf;
         m_TextField->box.size = Vec(67, 150.0);
         m_TextField->multiline = true;
-        m_TextField->setText(Morze::s_initText);
+        if (module)
+            m_TextField->setText(module->m_TextFieldText);
         addChild(m_TextField);
 
         m_pTextLabel = new Label();
@@ -460,6 +463,12 @@ void Morze::process(const ProcessArgs &args)
         outputs[OUT_GATE].setVoltage(CV_MAX10);
     else
         outputs[OUT_GATE].setVoltage(0.0f);
+}
+
+void Morze::onReset()
+{
+    m_TextFieldText = s_initText;
+    Text2Code((char *)m_TextFieldText.c_str());
 }
 
 Model *modelMorze = createModel<Morze, Morze_Widget>("Morze");
